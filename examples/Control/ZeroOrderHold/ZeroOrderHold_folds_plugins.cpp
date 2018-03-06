@@ -22,38 +22,7 @@
 #include "SiconosKernel.hpp"
 #include "SiconosControl.hpp"
 using namespace std;
-class MyDS : public FirstOrderLinearDS
-{
-public:
-  MyDS(SP::SiconosVector x0) : FirstOrderLinearDS(x0)
-  {
-    _b.reset(new SiconosVector(x0->size()));
-    _A.reset(new SimpleMatrix(x0->size(), x0->size(), 0));
-  };
-  MyDS(const MyDS & myds) : FirstOrderLinearDS(myds)
-  {
-    // copy constructor
-    std::cout << "copy constructor" << std::endl;
-  };
 
-  void computeA(double time)
-  {
-    printf("computeA\n");
-    double t = sin(50 * time);
-    _A->eye();
-    *_A  = t * *_A;
-    _A->display();
-  };
-  
-  void computeb(double time)
-  {
-    printf("computeB\n");
-    double t = sin(50 * time);
-    _b->setValue(0,t);
-    _b->setValue(1,-t);
-    printf("b[0] = %g, b[1] = %g\n", _b->getValue(0), _b->getValue(1));
-  };
-};
 // main program
 int main(int argc, char* argv[])
 {
@@ -92,8 +61,11 @@ int main(int argc, char* argv[])
   (*Brel)(1, 0) = 2;
 
   // Dynamical Systems
-  SP::FirstOrderLinearDS processDS(new MyDS(x0));
+  SP::FirstOrderLinearDS processDS(new FirstOrderLinearDS(x0));
+  processDS->setComputebFunction("Plugin", "computeB");
+  processDS->setComputeAFunction("Plugin", "computeA");
 
+  
   SP::NonSmoothDynamicalSystem nsds(new NonSmoothDynamicalSystem(t0, T));
   nsds->insertDynamicalSystem(processDS);
 
@@ -152,7 +124,7 @@ int main(int argc, char* argv[])
   // --- Output files ---
   cout << "====> Output file writing ..." << endl;
 
-  ioMatrix::write("ZeroOrderHold.dat", "ascii", dataPlot, "noDim");
+  ioMatrix::write("ZeroOrderHold_folds_plugins.dat", "ascii", dataPlot, "noDim");
 
   // // Comparison with a reference file
   // SimpleMatrix dataPlotRef(dataPlot);

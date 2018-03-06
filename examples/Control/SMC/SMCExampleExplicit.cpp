@@ -123,15 +123,24 @@ int main(int argc, char* argv[])
   ioMatrix::write("SMCExampleExplicit.dat", "ascii", dataPlot, "noDim");
 
   // Comparison with a reference file
-  SimpleMatrix dataPlotRef(dataPlot);
-  dataPlotRef.zero();
-  ioMatrix::read("SMCExampleExplicit.ref", "ascii", dataPlotRef);
-  std::cout << (dataPlot - dataPlotRef).normInf() << std::endl;
-
-  if ((dataPlot - dataPlotRef).normInf() > 1e-12)
+  try
   {
-    std::cout << "Warning. The results is rather different from the reference file." << std::endl;
-    return 1;
+    // // Comparison with a reference file
+    double error=0.0, eps=1e-12;
+    if ((error=ioMatrix::compareRefFile(dataPlot, "SMCExampleExplicit.ref", eps)) >= 0.0
+        && error > eps)
+      return 1;
   }
+  catch (SiconosException e)
+  {
+    cout << e.report() << endl;
+  }
+  catch (...)
+  {
+    cout << "Exception caught in SMCExampleExplicit.cpp" << endl;
+  }
+
+
+
 
 }
