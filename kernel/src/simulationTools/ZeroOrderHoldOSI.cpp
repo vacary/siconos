@@ -98,6 +98,7 @@ void ZeroOrderHoldOSI::initializeWorkVectorsForDS( double t, SP::DynamicalSystem
   else
     RuntimeException::selfThrow("ZeroOrderHoldOSI::initialize - Ad MatrixIntegrator is already initialized for ds the DS");
 
+  
   if((static_cast<const FirstOrderLinearDS&>(*ds)).b())
   {
     DEBUG_PRINT("The dynamical system has a b term \n");
@@ -326,7 +327,8 @@ void ZeroOrderHoldOSI::computeFreeState()
       
 
       
-      if(d.hasConstantB() && d.b())
+//      if(d.hasConstantB() && d.b())
+      if(d.b())
       {
         assert(DSG0.AdInt.hasKey(dsgVD));
         DEBUG_EXPR(DSG0.AdInt.at(dsgVD)->mat().display(););

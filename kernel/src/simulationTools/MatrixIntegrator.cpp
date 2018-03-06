@@ -80,12 +80,14 @@ void MatrixIntegrator::commonInit(const DynamicalSystem& ds, const NonSmoothDyna
      if (_E)
      {
        DEBUG_PRINT("Matrix integration of the constant (possibly time variant) part\n");
-       if (cfolds.getPluginB()->isPlugged())
-       {
-         DEBUG_PRINT("B is plugged\n");
-         std11::static_pointer_cast<FirstOrderLinearDS>(_DS)->setPluginB(cfolds.getPluginB());
-       }
+       // if (cfolds.getPluginB()->isPlugged())
+       // {
+       //   DEBUG_PRINT("B is plugged\n");
+       //   std11::static_pointer_cast<FirstOrderLinearDS>(_DS)->setPluginB(cfolds.getPluginB());
+       // }
+       static_cast<FirstOrderLinearDS&>(*_DS).setComputebFunction(NULL);
        _isConst = (_TD->hConst()) && (cfolds.hasConstantB()) ? true : false;
+       _isConst = (_TD->hConst()) ? true : false;
      }
      else
      {
