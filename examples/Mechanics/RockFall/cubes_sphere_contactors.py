@@ -65,7 +65,7 @@ with Hdf5(use_compression=True) as io:
   amont_vertices=numpy.array([v0,v1,v2,v3, v0_extruded,v1_extruded,v2_extruded,v3_extruded])
   print('amont_vertices', amont_vertices)
 
-  io.addConvexShape('amont',amont_vertices )
+  io.addConvexShape('amont',amont_vertices, insideMargin=0.000, outsideMargin=0.0000 )
   io.addObject('amont', [Contactor('amont')],
                translation=[1.50, -1.45, -1.5331])
 
@@ -82,7 +82,7 @@ with Hdf5(use_compression=True) as io:
   aval_vertices=numpy.array([v2,v3,v4,v5,v2_extruded,v3_extruded,v4_extruded,v5_extruded])
   print('aval_vertices', aval_vertices)
 
-  io.addConvexShape('aval',aval_vertices )
+  io.addConvexShape('aval',aval_vertices, insideMargin=0.000, outsideMargin=0.0000 )
   io.addObject('aval', [Contactor('aval')],
                translation=[1.50, -1.45, -1.5331])
 
@@ -102,7 +102,7 @@ with Hdf5(use_compression=True) as io:
                                   v6_extruded,v7_extruded])
   print('sol_vertices', sol_vertices)
 
-  io.addConvexShape('sol',sol_vertices )
+  io.addConvexShape('sol',sol_vertices, insideMargin=0.000, outsideMargin=0.0000 )
   io.addObject('sol', [Contactor('sol')],
                translation=[1.50, -1.45, -1.5331])
 
@@ -128,12 +128,12 @@ with Hdf5(use_compression=True) as io:
                      (cube_size, cube_size, -cube_size),
                      (cube_size, -cube_size, -cube_size),
                      (cube_size, -cube_size, cube_size)]
-        io.addConvexShape('CubeCS'+str(n)+'_'+str(i)+'_'+str(j), vertices)
+        io.addConvexShape('CubeCS'+str(n)+'_'+str(i)+'_'+str(j), vertices, insideMargin=0.000, outsideMargin=0.0000)
 
         for v in vertices:
           sphere_count += 1
           spheres.append('Sphere%03d'%sphere_count)
-          io.addPrimitiveShape(spheres[-1], 'Sphere', [radius])
+          io.addPrimitiveShape(spheres[-1], 'Sphere', [radius], insideMargin=0.000, outsideMargin=0.0000)
 
         # computation of inertia and volume
         ch = ConvexHull(vertices)
@@ -148,20 +148,23 @@ with Hdf5(use_compression=True) as io:
         for sph,loc in zip(spheres, vertices):
           contactor.append(Contactor(sph, relative_translation=loc))
 
+        # add a "fake" contactor for visualization ... 
+          
+        #contactor.append(Contactor('CubeCS'+str(n)+'_'+str(i)+'_'+str(j),  collision_group=2  ))
         io.addObject('cube'+str(n)+'_'+str(i)+'_'+str(j),
                      contactor,
                      translation=[i*(x_translate+x_shift*cube_size), x_shift*j*(x_translate+cube_size), (x_translate+cube_size*x_shift)*n],
-                     velocity=[0, 0, 0, 0, 0, 0],
+                     velocity=[0, 0, -1, 0, 0, 0],
                      orientation=[math.cos(angle_init/2.0),0,math.sin(angle_init/2.0),0],
                      mass=volume*density,
                      inertia=inertia*density)
 
 
   # Definition of a non smooth law
-  io.addNewtonImpactFrictionNSL('contact', e=0.01, mu=0.9)
+  io.addNewtonImpactFrictionNSL('contact', e=0.01, mu=0.9,  collision_group1=0, collision_group2=1)
 
 
-step=10000
+step=1000
 hstep=0.0005
 
 with Hdf5(mode='r+') as io:
@@ -171,7 +174,7 @@ with Hdf5(mode='r+') as io:
          t0=0,
          T=step*hstep,
          h=hstep,
-         multipoints_iterations=True,
+         multipoints_iterations=False,
          theta=0.50001,
          Newton_max_iter=1,
          set_external_forces=None,
@@ -179,4 +182,4 @@ with Hdf5(mode='r+') as io:
          itermax=100,
          tolerance=1e-8,
          numerics_verbose=False,
-         output_frequency=10)
+         output_frequency=1)
