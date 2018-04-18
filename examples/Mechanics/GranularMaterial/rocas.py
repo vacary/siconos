@@ -220,7 +220,7 @@ def una_roca_diagonal(io, name, cname, roca_size=0.05, density=1, trans=None, to
                  time_of_birth=tob,
                  inertia=inertia*density)
     
-def una_roca_diagional_uniform(io, name, cname, roca_size=0.05, density=1, trans=None, tob=None):
+def una_roca_diagonal_uniform(io, name, cname, roca_size=0.05, density=1, trans=None, tob=None):
     # Definition of an irregular polyhedron as a convex shape
 
     rd = [math.pi/2 * random.gauss(0.5,0.2) for _ in range(16)]
