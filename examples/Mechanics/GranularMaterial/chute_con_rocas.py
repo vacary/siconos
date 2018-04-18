@@ -42,13 +42,13 @@ plane_thickness = 0.2
 cube_size = 0.1
 
 with MechanicsHdf5Runner(mode='w', io_filename=fn) as io:
-    # ch = chute.create_chute(io, box_height = box_height,
-    #                         box_length = box_length,
-    #                         box_width = box_width,
-    #                         plane_thickness = plane_thickness,
-    #                         scale = 1, trans = [-0.6, -1.8, -1])
+    ch = chute.create_chute(io, box_height = box_height,
+                            box_length = box_length,
+                            box_width = box_width,
+                            plane_thickness = plane_thickness,
+                            scale = 1, trans = [-0.6, -1.8, -1])
 
-    rcs = rocas.create_rocas(io, n_layer=1, n_row=1, n_col=1,
+    rcs = rocas.create_rocas(io, n_layer=200, n_row=2, n_col=16,
                              x_shift=2.0, roca_size=0.1, top=3,
                              rate=0.2, density=density, inertia_type='cube_shape')
 
