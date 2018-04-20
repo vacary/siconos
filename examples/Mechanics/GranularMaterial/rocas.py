@@ -7,9 +7,8 @@ from siconos.mechanics.collision.tools import Contactor
 from siconos.mechanics.collision.convexhull import ConvexHull
 import sys
 
-from OCC.BRepPrimAPI import BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeSphere
-from OCC.BRepBuilderAPI import BRepBuilderAPI_MakePolygon, BRepBuilderAPI_MakeFace, BRepBuilderAPI_Sewing, BRepBuilderAPI_MakeSolid
-from OCC.gp import gp_Pnt, gp_Ax2, gp_Dir
+#from OCC.BRepPrimAPI import BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeSphere
+#from OCC.gp import gp_Pnt, gp_Ax2, gp_Dir
 
 
 from siconos.io.mechanics_hdf5 import compute_inertia_and_center_of_mass
@@ -33,6 +32,7 @@ class assert_isdone(object):
         pass
 
 def make_polygon(args, closed=False):
+    from OCC.BRepBuilderAPI import BRepBuilderAPI_MakePolygon
     poly = BRepBuilderAPI_MakePolygon()
     for pt in args:
         # support nested lists
@@ -50,13 +50,16 @@ def make_polygon(args, closed=False):
         return result
 
 
-from OCC.TopAbs import *
-from OCC.TopoDS import topods, TopoDS_Shape
+
 class ShapeToTopology(object):
     '''
     looks up the topology type and returns the corresponding topological entity
     '''
+    from OCC.TopAbs import TopAbs_VERTEX, TopAbs_EDGE,  TopAbs_FACE, TopAbs_WIRE, TopAbs_SHELL, TopAbs_SOLID, TopAbs_COMPOUND, TopAbs_COMPSOLID
+    from OCC.TopoDS import topods, TopoDS_Shape
     def __init__(self):
+        from OCC.TopAbs import TopAbs_VERTEX, TopAbs_EDGE,  TopAbs_FACE, TopAbs_WIRE, TopAbs_SHELL, TopAbs_SOLID, TopAbs_COMPOUND, TopAbs_COMPSOLID
+        from OCC.TopoDS import topods, TopoDS_Shape
         self.topoTypes = {TopAbs_VERTEX:      topods.Vertex,
                           TopAbs_EDGE:        topods.Edge,
                           TopAbs_FACE:        topods.Face,
@@ -68,6 +71,7 @@ class ShapeToTopology(object):
                           }
 
     def __call__(self, shape):
+        from OCC.TopoDS import topods, TopoDS_Shape
         if isinstance(shape, TopoDS_Shape):
             return self.topoTypes[shape.ShapeType()](shape)
         else:
@@ -79,6 +83,7 @@ class ShapeToTopology(object):
 
 
 def sew_shapes(shapes, tolerance=0.001):
+    from OCC.BRepBuilderAPI import BRepBuilderAPI_Sewing
     sew = BRepBuilderAPI_Sewing(tolerance)
     for shp in shapes:
         if isinstance(shp, list):
@@ -95,6 +100,7 @@ def sew_shapes(shapes, tolerance=0.001):
     return result
 
 def make_face(*args):
+    from OCC.BRepBuilderAPI import BRepBuilderAPI_MakeFace
     face = BRepBuilderAPI_MakeFace(*args)
     with assert_isdone(face, 'failed to produce face'):
         result = face.Face()
@@ -102,6 +108,7 @@ def make_face(*args):
         return result
 
 def make_solid(*args):
+    from OCC.BRepBuilderAPI import BRepBuilderAPI_MakeSolid
     sld = BRepBuilderAPI_MakeSolid(*args)
     with assert_isdone(sld, 'failed to produce solid'):
         result = sld.Solid()
@@ -110,6 +117,8 @@ def make_solid(*args):
 
 def occ_make_face(a,b,c):
 
+    
+    from OCC.gp import gp_Pnt
     p1 = gp_Pnt( a[0], a[1], a[2] )
     p2 = gp_Pnt( b[0], b[1], b[2] )
     p3 = gp_Pnt( c[0], c[1], c[2] )
@@ -164,9 +173,6 @@ def test_occ_inertia(cname, coordinates, density):
             inertia_matrix[i,j]=  gp_mat.Value(i+1,j+1)
     print('mass', mass)
     print('inertia_matrix', inertia_matrix)
-=======
->>>>>>> a5185cd3106a8e282dd23509f5b96d10feb3eba7
-
 
 def rotation_matrix_to_quaternion(A):
 
@@ -283,14 +289,14 @@ def una_roca_cube_shape(io, name, cname, roca_size=0.05, density=1, trans=None, 
     # computation of inertia and volume
     inertia,volume=ch.inertia(ch.centroid())
 
-    test_occ_inertia(cname, vertices, density)
+    # test_occ_inertia(cname, vertices, density)
 
 
-    print('roca_size', roca_size)
-    print('geometric inertia:', inertia)
-    print('volume:', volume)
-    print('mass:', volume*density)
-    print('inertia:', inertia*density)
+    # print('roca_size', roca_size)
+    # print('geometric inertia:', inertia)
+    # print('volume:', volume)
+    # print('mass:', volume*density)
+    # print('inertia:', inertia*density)
 
 
 
