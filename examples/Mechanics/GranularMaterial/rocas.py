@@ -164,6 +164,8 @@ def test_occ_inertia(cname, coordinates, density):
             inertia_matrix[i,j]=  gp_mat.Value(i+1,j+1)
     print('mass', mass)
     print('inertia_matrix', inertia_matrix)
+=======
+>>>>>>> a5185cd3106a8e282dd23509f5b96d10feb3eba7
 
 
 def rotation_matrix_to_quaternion(A):
@@ -190,8 +192,8 @@ def rotation_matrix_to_quaternion(A):
     l = l[idx]
     v = v[:,idx]
     print('quaternion', v[:,0])
-    return v[:,0]
 
+    return v[:,0]
 
 
 def una_roca(io, name, cname, roca_size=0.05, density=1, trans=None, tob=None):
@@ -280,6 +282,7 @@ def una_roca_cube_shape(io, name, cname, roca_size=0.05, density=1, trans=None, 
 
     # computation of inertia and volume
     inertia,volume=ch.inertia(ch.centroid())
+
     test_occ_inertia(cname, vertices, density)
 
 
@@ -299,6 +302,7 @@ def una_roca_cube_shape(io, name, cname, roca_size=0.05, density=1, trans=None, 
                             [  1, -1, -1],
                             [ -1,  1, -1],
                             [ -1, -1, -1]]) * roca_size
+
 
     # ch = ConvexHull(vertices)
     # cm = ch.centroid()
@@ -386,7 +390,6 @@ def una_roca_diagonal(io, name, cname, roca_size=0.05, density=1, trans=None, to
     # print('volume:', volume)
     # print('mass:', volume*density)
     print('inertia:', inertia*density)
-
 
     io.add_object(name,
                  [Contactor(cname)],
@@ -516,8 +519,6 @@ def una_roca_rotated(io, name, cname, roca_size=0.05, density=1, trans=None, tob
                  time_of_birth=tob,
                  inertia=inertia*density)
 
-
-
     l,v = numpy.linalg.eig(inertia)
     idx = l.argsort()[::-1]
     l = l[idx]
@@ -544,9 +545,6 @@ def una_roca_rotated(io, name, cname, roca_size=0.05, density=1, trans=None, tob
         print('not a normal matrix')
         exit()
 
-
-
-
     print('R^-1=R^T', numpy.linalg.norm(v.transpose()-numpy.linalg.inv(v)))
 
     print('vertices', vertices)
@@ -554,6 +552,7 @@ def una_roca_rotated(io, name, cname, roca_size=0.05, density=1, trans=None, tob
     vertices = numpy.dot(v.transpose(),vertices.transpose()).transpose()
     #vertices = numpy.dot(v,vertices.transpose()).transpose()
     q=rotation_matrix_to_quaternion(v)
+
 
     print('rotated vertices', vertices)
     ch = ConvexHull(vertices)
@@ -574,7 +573,6 @@ def una_roca_rotated(io, name, cname, roca_size=0.05, density=1, trans=None, tob
     print('eigen vectors', v)
     print('determinant', numpy.linalg.det(v))
     print('R^-1=R^T', numpy.linalg.norm(v.transpose()-numpy.linalg.inv(v)))
-
 
     print('center of mass', cm)
     print('geometric inertia:', inertia)
@@ -681,9 +679,10 @@ def create_rocas(io, n_layer=5, n_row=5, n_col=5, x_shift=3.0,
                          top]
                 name = 'rock'+str(n)+'_'+str(i)+'_'+str(j)
                 cname = 'RockCS'+str(n)+'_'+str(i)+'_'+str(j)
+
                 delay= random.random()*rate
-                print('delay', delay)
-                delay=0.0
+                # print('delay', delay)
+                # delay=0.0
                 if inertia_type == 'diagonal':
                     una_roca_diagonal(io, name, cname, sizes[k], density, trans,
                              tob = n*rate + delay)
@@ -699,4 +698,5 @@ def create_rocas(io, n_layer=5, n_row=5, n_col=5, x_shift=3.0,
                 else:
                     una_roca(io, name, cname, sizes[k], density, trans,
                              tob = n*rate + delay)
+
                 k += 1
