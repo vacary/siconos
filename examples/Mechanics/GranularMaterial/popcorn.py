@@ -5,28 +5,35 @@ import siconos.numerics as Numerics
 
 from shutil import copyfile
 
-fn = 'popcorn_scene_8_cubes.hdf5'
-#fn = 'popcorn_scene_4_cubes.hdf5'
-#fn = 'popcorn_scene_2_cubes.hdf5'
+status =True
+loop_max =1
+loop =0
+while (status and (loop < loop_max) ):
 
-fn_simulation = fn.replace('scene', 'simulation')
+    loop = loop+1
 
-print(fn, fn_simulation)
+    fn = 'popcorn_scene_8_cubes.hdf5'
+    #fn = 'popcorn_scene_4_cubes.hdf5'
+    #fn = 'popcorn_scene_2_cubes.hdf5'
 
-copyfile(fn, fn_simulation)
+    fn_simulation = fn.replace('scene', 'simulation')
+
+    print(fn, fn_simulation)
+
+    copyfile(fn, fn_simulation)
 
 
-with MechanicsHdf5Runner(mode='r+', io_filename=fn_simulation, collision_margin =0.01) as io:
-    io.run(t0=0,
-           T=1,
-           h=1e-4,
-           multipoints_iterations=True,
-           theta=1.0,
-           Newton_max_iter=1,
-           solver=Numerics.SICONOS_FRICTION_3D_NSGS,
-           itermax=1000,
-           tolerance=1e-3,
-           exit_tolerance=10.0,
-           output_frequency=10,
-           violation_verbose=True,
-           numerics_verbose=False)
+    with MechanicsHdf5Runner(mode='r+', io_filename=fn_simulation, collision_margin =0.01) as io:
+        status = io.run(t0=0,
+                        T=1,
+                        h=1e-4,
+                        multipoints_iterations=True,
+                        theta=1.0,
+                        Newton_max_iter=1,
+                        solver=Numerics.SICONOS_FRICTION_3D_NSGS,
+                        itermax=1000,
+                        tolerance=1e-3,
+                        exit_tolerance=1.0,
+                        output_frequency=10,
+                        violation_verbose=False,
+                        numerics_verbose=False)
