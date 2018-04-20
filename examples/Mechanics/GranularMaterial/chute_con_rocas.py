@@ -48,9 +48,13 @@ with MechanicsHdf5Runner(mode='w', io_filename=fn) as io:
                             plane_thickness = plane_thickness,
                             scale = 1, trans = [-0.6, -1.8, -1])
 
+    # rcs = rocas.create_rocas(io, n_layer=200, n_row=2, n_col=16,
+    #                          x_shift=2.0, roca_size=0.1, top=3,
+    #                          rate=0.2, density=density, inertia_type='cube_shape')
+    
     rcs = rocas.create_rocas(io, n_layer=200, n_row=2, n_col=16,
                              x_shift=2.0, roca_size=0.1, top=3,
-                             rate=0.2, density=density, inertia_type='cube_shape')
+                             rate=0.2, density=density)
 
     io.add_Newton_impact_friction_nsl('contact', mu=1.0, e=0.01)
 
@@ -62,6 +66,7 @@ with MechanicsHdf5Runner(mode='r+', io_filename=fn) as io:
            theta=1.0,
            Newton_max_iter=1,
            solver=Numerics.SICONOS_FRICTION_3D_NSGS,
+           #local_solver=Numerics.SICONOS_FRICTION_3D_ONECONTACT_ProjectionOnConeWithLocalIteration,
            itermax=1000,
            tolerance=1e-3,
            output_frequency=10)
