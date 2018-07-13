@@ -24,7 +24,7 @@ installer:
     nixos/nix: nix-env -i
 
 updater:
-  # specific installer for sicono package from launchpad
+  # specific installer for siconos package from launchpad
   siconos-source:
     ubuntu-16.04: printf "deb http://ppa.launchpad.net/siconos/siconos-daily/ubuntu xenial main\ndeb-src http://ppa.launchpad.net/siconos/siconos-daily/ubuntu xenial main\ndeb http://ppa.launchpad.net/siconos/fclib-daily/ubuntu xenial main\ndeb-src http://ppa.launchpad.net/siconos/fclib-daily/ubuntu xenial main " >> /etc/apt/sources.list && apt-get update -y
     fedora:  dnf --setopt=deltarpm=false install -y dnf-plugins-core && dnf -y copr enable xhub/siconos-git
@@ -262,7 +262,7 @@ pkgs:
         wget http://www.cmake.org/files/v3.0/cmake-3.0.2.tar.gz&&
         tar xf cmake-3.0.2.tar.gz&&
         cd cmake-3.0.2&&
-        ./configure&&
+	./bootstrap --system-curl&&
         make install
 
   cmake-3.11.4:
@@ -271,7 +271,7 @@ pkgs:
         wget http://www.cmake.org/files/v3.11/cmake-3.11.4.tar.gz&&
         tar xf cmake-3.11.4.tar.gz&&
         cd cmake-3.11.4&&
-        ./configure&&
+	./bootstrap --system-curl&&
         make install
 
   swig:
