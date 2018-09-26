@@ -1,12 +1,12 @@
 // User-defined main parameters
 double t0 = 1e-8;                   // initial computation time
 double T = 0.0015;                  // final computation time
-double h = 1e-4;                // time step
+double h = 1e-3;                // time step
 
 T=10000*h;
 
-double position_init = 0.00000;      // initial position
-double velocity_init =  -.1;      // initial velocity
+//double position_init = 0.00000;      // initial position
+//double velocity_init =  -.1;      // initial velocity
 
 double epsilon = 0.0;//1e-1;
 double theta = 1/2.0 + epsilon;              // theta for MoreauJeanOSI integrator

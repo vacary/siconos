@@ -35,10 +35,15 @@ int main(int argc, char* argv[])
 
     
     // -- The dynamical system --
-    const char *mesh_file = "./data/beam-hex.mesh";
+    const char *mesh_file = "./data/beam-tri-light.mesh";
     LinearElacticMaterial *  mat = new LinearElacticMaterial(E, nu, rho);
     SP::PunchLagrangianLinearTIDS  punch (new PunchLagrangianLinearTIDS(mesh_file, *mat));
-
+    punch->setDirichletBoundaryConditions(1);
+    punch->computeFEMStiffness();
+    punch->computeFEMMass();
+    punch->computeFEMForces();
+    punch->display();
+    
     unsigned int nDof = punch->dimension();
 
     // -- Set external forces (weight) --
@@ -72,7 +77,7 @@ int main(int argc, char* argv[])
     impactingPunch->insertDynamicalSystem(punch);
 
     // link the interaction and the dynamical system
-    impactingPunch->link(inter,punch);
+    //impactingPunch->link(inter,punch);
 
 
     // ------------------
@@ -186,6 +191,13 @@ int main(int argc, char* argv[])
 //       std::cout <<"kineticEnergy ="<<kineticEnergy << std::endl;
 
 
+      punch->outputSolution();
+      // cout << "hit a key to continue" << endl;
+      
+      // string buffer(" "); 
+
+      // std::cin >> buffer; 
+
 
       s->nextStep();
       ++show_progress;
@@ -193,7 +205,7 @@ int main(int argc, char* argv[])
     }
     cout<<endl << "End of computation - Number of iterations done: "<<k-1<<endl;
     cout << "Computation Time " << time.elapsed()  << endl;
-
+    punch->outputSolution();
     // --- Output files ---
     cout<<"====> Output file writing ..."<<endl;
     ioMatrix::write("ImpactingPunch.dat", "ascii", dataPlot,"noDim");
