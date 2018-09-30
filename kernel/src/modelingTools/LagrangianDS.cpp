@@ -48,7 +48,7 @@ void LagrangianDS::_init(SP::SiconosVector position, SP::SiconosVector velocity)
 // Build from initial state only
 LagrangianDS::LagrangianDS(SP::SiconosVector q0, SP::SiconosVector v0):
   DynamicalSystem(2 * q0->size()), _ndof(v0->size()),
-  _hasConstantMass(true), _hasConstantFExt(true)
+  _hasConstantMass(true), _hasConstantK(false), _hasConstantC(false), _hasConstantFExt(true)
 {
   // Initial conditions
   _init(q0, v0);
@@ -57,7 +57,7 @@ LagrangianDS::LagrangianDS(SP::SiconosVector q0, SP::SiconosVector v0):
 // From initial state and constant mass matrix, \f$ M\ddot q = p \f$
 LagrangianDS::LagrangianDS(SP::SiconosVector q0, SP::SiconosVector v0, SP::SiconosMatrix newMass):
   DynamicalSystem(2 * q0->size()), _ndof(v0->size()),
-  _hasConstantMass(true), _hasConstantFExt(true)
+  _hasConstantMass(true),  _hasConstantK(false), _hasConstantC(false), _hasConstantFExt(true)
 
 {
   _init(q0, v0);
@@ -69,7 +69,7 @@ LagrangianDS::LagrangianDS(SP::SiconosVector q0, SP::SiconosVector v0, SP::Sicon
 // This constructor leads to the minimum Lagrangian System form: \f$ M(q)\ddot q = p \f$
 LagrangianDS::LagrangianDS(SP::SiconosVector q0, SP::SiconosVector v0, const std::string& massName):
   DynamicalSystem(), _ndof(q0->size()),
-  _hasConstantMass(false), _hasConstantFExt(true)
+  _hasConstantMass(false), _hasConstantK(false), _hasConstantC(false), _hasConstantFExt(true)
 {
   _init(q0, v0);
   // Mass
@@ -139,8 +139,8 @@ void LagrangianDS::update_inverse_mass()
 
 void LagrangianDS::init_forces()
 {
+  DEBUG_BEGIN("LagrangianDS::init_forces()\n");
   // Allocate memory for forces and its jacobians.
-  // Needed only for integrators with first-order formulation.
   if(_fInt || _fExt || _fGyr)
   {
     if(!_forces)
@@ -150,10 +150,16 @@ void LagrangianDS::init_forces()
   if(_fInt || _fGyr)
   {
     if(!_jacobianqForces)
+    {
+      /* Warning: we are forcing the dense storage */
       _jacobianqForces.reset(new SimpleMatrix(_ndof, _ndof));
+      DEBUG_PRINT("_jacobianqForces.reset(new SimpleMatrix(_ndof, _ndof));\n");
+      DEBUG_EXPR(_jacobianqForces->display(););
+    }
     if(!_jacobianqDotForces)
       _jacobianqDotForces.reset(new SimpleMatrix(_ndof, _ndof));
   }
+  DEBUG_END("LagrangianDS::init_forces()\n");
 }
 
 void LagrangianDS::initRhs(double time)
@@ -354,26 +360,96 @@ void LagrangianDS::computeMass(SP::SiconosVector position)
   }
 }
 
+/** This function has been added to avoid Swig director to wrap _FInt into numpy.array
+ *  when we call  LagrangianDS::computeFInt(double time, SP::SiconosVector fInt)
+ *  that calls in turn computeFInt(time, ...;
+ */
+static
+void computeFInt_internal(double time, bool hasConstantK, bool hasConstantC,
+                          unsigned int ndof,
+                          SP::SiconosVector q, SP::SiconosVector v,
+                          SP::SiconosMatrix K, SP::SiconosMatrix C, 
+                          SP::PluggedObject pluginFInt, SP::SiconosVector fInt_attributes,
+                          SP::SiconosVector fInt,
+                          SP::SiconosVector z)
+{
+  /* if the pointer has been set to an external matrix for K or C
+   * after setting the plugin, we do not call the plugin */
+  if(hasConstantK || hasConstantC)
+  {
+    if(fInt != fInt_attributes)
+      *fInt = *fInt_attributes;
+    fInt->zero();
+    if (hasConstantK)
+      prod(1.0, *K , *q, *fInt, false);
+    if (hasConstantC)
+      prod(1.0, *C , *v, *fInt, false);
+    
+  }
+  else if(pluginFInt->fPtr)
+    ((FPtr6)pluginFInt->fPtr)(time, ndof, &(*q)(0), &(*v)(0), &(*fInt)(0), z->size(), &(*z)(0));
+  
+
+}
+
 void LagrangianDS::computeFInt(double time)
 {
-  if(_fInt && _pluginFInt->fPtr)
-    ((FPtr6)_pluginFInt->fPtr)(time, _ndof, &(*_q[0])(0), &(*_q[1])(0), &(*_fInt)(0), _z->size(), &(*_z)(0));
+  computeFInt_internal(time, _hasConstantK, _hasConstantC,
+                       _ndof,
+                       _q[0], _q[1],
+                       _K, _C,
+                       _pluginFInt, _fInt, _fInt, _z);
 }
+
 void LagrangianDS::computeFInt(double time, SP::SiconosVector position, SP::SiconosVector velocity)
 {
-  if(_fInt && _pluginFInt->fPtr)
-    ((FPtr6)_pluginFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_fInt)(0), _z->size(), &(*_z)(0));
+  computeFInt_internal(time, _hasConstantK, _hasConstantC,
+                       _ndof,
+                       position, velocity,
+                       _K,_C,
+                       _pluginFInt, _fInt, _fInt, _z);
+}
+
+/** This function has been added to avoid Swig director to wrap _MExt into numpy.array
+ *  when we call  LagrangianDS::computeFExt(double time, SP::SiconosVector fExt)
+ *  that calls in turn computeFExt(time, _fExt);
+ */
+static
+void computeFExt_internal(double time, bool hasConstantFExt,
+                          unsigned int ndof,
+                          SP::PluggedObject pluginFExt, SP::SiconosVector fExt_attributes,
+                          SP::SiconosVector fExt,
+                          SP::SiconosVector z)
+{
+  /* if the pointer has been set to an external vector
+   * after setting the plugin, we do not call the plugin */
+  if(hasConstantFExt)
+  {
+    if(fExt != fExt_attributes)
+      *fExt = *fExt_attributes;
+  }
+  else if(pluginFExt->fPtr)
+    ((VectorFunctionOfTime)pluginFExt->fPtr)(time, ndof, &(*fExt)(0), z->size(), &(*z)(0));
+
 }
 
 void LagrangianDS::computeFExt(double time)
 {
-  if(!_hasConstantFExt)
-  {
-    if(_fExt && _pluginFExt->fPtr)
-      ((VectorFunctionOfTime)_pluginFExt->fPtr)(time, _ndof, &(*_fExt)(0), _z->size(), &(*_z)(0));
-  }
-
+  computeFExt_internal(time,_hasConstantFExt,
+                       _ndof, 
+                       _pluginFExt, _fExt, _fExt, _z);
 }
+
+void LagrangianDS::computeFExt(double time, SP::SiconosVector fExt)
+{
+  computeFExt_internal(time,_hasConstantFExt,
+                       _ndof,
+                       _pluginFExt, _fExt, fExt, _z); 
+}
+
+
+
+
 void LagrangianDS::computeFGyr()
 {
   if(_fGyr && _pluginFGyr->fPtr)
@@ -385,27 +461,55 @@ void LagrangianDS::computeFGyr(SP::SiconosVector position, SP::SiconosVector vel
   if(_fGyr && _pluginFGyr->fPtr)
     ((FPtr5)_pluginFGyr->fPtr)(_ndof, &(*position)(0), &(*velocity)(0), &(*_fGyr)(0), _z->size(), &(*_z)(0));
 }
+void LagrangianDS::setK(const SiconosMatrix& newValue)
+{
+  if (newValue.size(0) != _ndof || newValue.size(1) != _ndof)
+    RuntimeException::selfThrow("LagrangianLinearTIDS - setK: inconsistent input matrix size ");
 
+  if (!_K)
+    _K.reset(new SimpleMatrix(newValue));
+  else
+    *_K = newValue;
+}
+
+
+void LagrangianDS::setC(const SiconosMatrix& newValue)
+{
+  if (newValue.size(0) != _ndof || newValue.size(1) != _ndof)
+    RuntimeException::selfThrow("LagrangianLinearTIDS - setC: inconsistent input matrix size ");
+
+  if (!_C)
+    _C.reset(new SimpleMatrix(newValue));
+  else
+    *_C = newValue;
+}
 
 void LagrangianDS::computeJacobianFIntq(double time)
 {
   DEBUG_BEGIN("LagrangianDS::computeJacobianFIntq()\n");
   DEBUG_EXPR(_q[0]->display());
   DEBUG_EXPR(_q[1]->display());
-  if(_jacobianFIntq&& _pluginJacqFInt->fPtr)
-    ((FPtr6)_pluginJacqFInt->fPtr)(time, _ndof, &(*_q[0])(0), &(*_q[1])(0), &(*_jacobianFIntq)(0, 0), _z->size(), &(*_z)(0));
-  DEBUG_EXPR(if(_jacobianFIntq) _jacobianFIntq->display(););
+  if (!_hasConstantK)
+  {
+    if(_K&& _pluginJacqFInt->fPtr)
+      ((FPtr6)_pluginJacqFInt->fPtr)(time, _ndof, &(*_q[0])(0), &(*_q[1])(0), &(*_K)(0, 0), _z->size(), &(*_z)(0));
+  }
+  DEBUG_EXPR(if(_K) _K->display(););
   DEBUG_END("LagrangianDS::computeJacobianFIntq()\n");
 }
+
 void LagrangianDS::computeJacobianFIntqDot(double time)
 {
   DEBUG_BEGIN("LagrangianDS::computeJacobianFIntqDot()\n");
   DEBUG_EXPR(_q[0]->display());
   DEBUG_EXPR(_q[1]->display());
   DEBUG_EXPR(_z->display());
-  if(_jacobianFIntqDot && _pluginJacqDotFInt->fPtr)
-    ((FPtr6)_pluginJacqDotFInt->fPtr)(time, _ndof, &(*_q[0])(0), &(*_q[1])(0), &(*_jacobianFIntqDot)(0, 0), _z->size(), &(*_z)(0));
-  DEBUG_EXPR(if(_jacobianFIntqDot) _jacobianFIntqDot->display(););
+  if(!_hasConstantC)
+  {
+    if(_C && _pluginJacqDotFInt->fPtr)
+      ((FPtr6)_pluginJacqDotFInt->fPtr)(time, _ndof, &(*_q[0])(0), &(*_q[1])(0), &(*_C)(0, 0), _z->size(), &(*_z)(0));
+  }
+  DEBUG_EXPR(if(_C) _C->display(););
   DEBUG_END("LagrangianDS::computeJacobianFIntqDot()\n");
 }
 
@@ -415,15 +519,15 @@ void LagrangianDS::computeJacobianFIntq(double time, SP::SiconosVector position,
   DEBUG_BEGIN("LagrangianDS::computeJacobianFIntq()\n");
   DEBUG_EXPR(position->display());
   DEBUG_EXPR(velocity->display());
-  if(_jacobianFIntq && _pluginJacqFInt->fPtr)
-    ((FPtr6)_pluginJacqFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_jacobianFIntq)(0, 0), _z->size(), &(*_z)(0));
-  DEBUG_EXPR(if(_jacobianFIntq) _jacobianFIntq->display(););
+  if(_K && _pluginJacqFInt->fPtr)
+    ((FPtr6)_pluginJacqFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_K)(0, 0), _z->size(), &(*_z)(0));
+  DEBUG_EXPR(if(_K) _K->display(););
   DEBUG_END("LagrangianDS::computeJacobianFIntq()\n");
 }
 void LagrangianDS::computeJacobianFIntqDot(double time, SP::SiconosVector position, SP::SiconosVector velocity)
 {
-  if(_jacobianFIntqDot && _pluginJacqDotFInt->fPtr)
-    ((FPtr6)_pluginJacqDotFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_jacobianFIntqDot)(0, 0), _z->size(), &(*_z)(0));
+  if(_C && _pluginJacqDotFInt->fPtr)
+    ((FPtr6)_pluginJacqDotFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_C)(0, 0), _z->size(), &(*_z)(0));
 }
 
 void LagrangianDS::computeJacobianFGyrq()
@@ -549,24 +653,29 @@ void LagrangianDS::computeForces(double time, SP::SiconosVector position, SP::Si
 
 void LagrangianDS::computeJacobianqForces(double time)
 {
-  if(_jacobianqForces)
+  DEBUG_BEGIN("LagrangianDS::computeJacobianqForces(double time)\n");
+  if (!_hasConstantK)
   {
-    computeJacobianFIntq(time);
-    computeJacobianFGyrq();
-
-    // not true!
-    // if( jacobianFL[i].use_count() == 1 )
+    if(_jacobianqForces)
     {
-      //if not that means that jacobianFL[i] is already (pointer-)connected with
-      // either jacobianFInt or jacobianFGyr
-      _jacobianqForces->zero();
-      if(_jacobianFIntq)
-        *_jacobianqForces -= *_jacobianFIntq;
-      if(_jacobianFGyrq)
-        *_jacobianqForces -= *_jacobianFGyrq;
+      computeJacobianFIntq(time);
+      computeJacobianFGyrq();
+
+      // not true!
+      // if( jacobianFL[i].use_count() == 1 )
+      {
+        //if not that means that jacobianFL[i] is already (pointer-)connected with
+        // either jacobianFInt or jacobianFGyr
+        _jacobianqForces->zero();
+        if(_K)
+          *_jacobianqForces -= *_K;
+        if(_jacobianFGyrq)
+          *_jacobianqForces -= *_jacobianFGyrq;
+      }
     }
   }
   //else nothing.
+  DEBUG_END("LagrangianDS::computeJacobianqForces(double time)\n");
 }
 void LagrangianDS::computeJacobianqDotForces(double time)
 {
@@ -581,8 +690,8 @@ void LagrangianDS::computeJacobianqDotForces(double time)
       //if not that means that jacobianFL[i] is already (pointer-)connected with
       // either jacobianFInt or jacobianFGyr
       _jacobianqDotForces->zero();
-      if(_jacobianFIntqDot)
-        *_jacobianqDotForces -= *_jacobianFIntqDot;
+      if(_C)
+        *_jacobianqDotForces -= *_C;
       if(_jacobianFGyrqDot)
         *_jacobianqDotForces -= *_jacobianFGyrqDot;
     }
@@ -593,35 +702,6 @@ void LagrangianDS::computeJacobianqDotForces(double time)
 //    RuntimeException::selfThrow("LagrangianDS::computeJacobianZFL - not implemented");
 // }
 
-void LagrangianDS::display() const
-{
-  std::cout << "=====> Lagrangian System display (number: " << _number << ")." <<std::endl;
-  std::cout << "- _ndof : " << _ndof <<std::endl;
-  std::cout << "- q " <<std::endl;
-  if(_q[0]) _q[0]->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "- q0 " <<std::endl;
-  if(_q0) _q0->display();
-  std::cout << "- velocity " <<std::endl;
-  if(_q[1]) _q[1]->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "- acceleration " <<std::endl;
-  if(_q[2]) _q[2]->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "- v0 " <<std::endl;
-  if(_velocity0) _velocity0->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "- p[0] " <<std::endl;
-  if(_p[0]) _p[0]->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "- p[1] " <<std::endl;
-  if(_p[1]) _p[1]->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "- p[2] " <<std::endl;
-  if(_p[2]) _p[2]->display();
-  else std::cout << "-> NULL" <<std::endl;
-  std::cout << "===================================== " <<std::endl;
-}
 
 // --- Functions for memory handling ---
 void LagrangianDS::initMemory(unsigned int steps)
@@ -710,32 +790,32 @@ void LagrangianDS::setComputeFGyrFunction(FPtr5 fct)
 void LagrangianDS::setComputeJacobianFIntqFunction(const std::string&  pluginPath, const std::string&  functionName)
 {
   _pluginJacqFInt->setComputeFunction(pluginPath, functionName);
-  if(!_jacobianFIntq)
-    _jacobianFIntq.reset(new SimpleMatrix(_ndof, _ndof));
+  if(!_K)
+    _K.reset(new SimpleMatrix(_ndof, _ndof));
   init_forces();
 }
 
 void LagrangianDS::setComputeJacobianFIntqDotFunction(const std::string&  pluginPath, const std::string&  functionName)
 {
   _pluginJacqDotFInt->setComputeFunction(pluginPath, functionName);
-  if(!_jacobianFIntqDot)
-    _jacobianFIntqDot.reset(new SimpleMatrix(_ndof, _ndof));
+  if(!_C)
+    _C.reset(new SimpleMatrix(_ndof, _ndof));
   init_forces();
 }
 
 void LagrangianDS::setComputeJacobianFIntqFunction(FPtr6 fct)
 {
   _pluginJacqFInt->setComputeFunction((void *)fct);
-  if(!_jacobianFIntq)
-    _jacobianFIntq.reset(new SimpleMatrix(_ndof, _ndof));
+  if(!_K)
+    _K.reset(new SimpleMatrix(_ndof, _ndof));
   init_forces();
 }
 
 void LagrangianDS::setComputeJacobianFIntqDotFunction(FPtr6 fct)
 {
   _pluginJacqDotFInt->setComputeFunction((void *)fct);
-  if(!_jacobianFIntqDot)
-    _jacobianFIntqDot.reset(new SimpleMatrix(_ndof, _ndof));
+  if(!_C)
+    _C.reset(new SimpleMatrix(_ndof, _ndof));
   init_forces();
 }
 
@@ -797,3 +877,51 @@ void LagrangianDS::setBoundaryConditions(SP::BoundaryCondition newbd)
   _boundaryConditions = newbd;
   _reactionToBoundaryConditions.reset(new SiconosVector(_boundaryConditions->velocityIndices()->size()));
 };
+
+
+void LagrangianDS::display(bool brief) const
+{
+  std::cout << "=====> Lagrangian System display (number: " << _number << ")." <<std::endl;
+  std::cout << "- _ndof : " << _ndof <<std::endl;
+  std::cout << "- q " <<std::endl;
+  if(_q[0]) _q[0]->display();
+  else std::cout << "-> NULL" <<std::endl;
+  std::cout << "- q0 " <<std::endl;
+  if(_q0) _q0->display();
+  std::cout << "- velocity " <<std::endl;
+  if(_q[1]) _q[1]->display();
+  else std::cout << "-> NULL" <<std::endl;
+  std::cout << "- acceleration " <<std::endl;
+  if(_q[2]) _q[2]->display();
+  else std::cout << "-> NULL" <<std::endl;
+  std::cout << "- v0 " <<std::endl;
+  if(_velocity0) _velocity0->display();
+  else std::cout << "-> NULL" <<std::endl;
+  std::cout << "- p[0] " <<std::endl;
+  if(_p[0]) _p[0]->display();
+  else std::cout << "-> NULL" <<std::endl;
+  std::cout << "- p[1] " <<std::endl;
+  if(_p[1]) _p[1]->display();
+  else std::cout << "-> NULL" <<std::endl;
+  std::cout << "- p[2] " <<std::endl;
+  if(_p[2]) _p[2]->display();
+  else std::cout << "-> NULL" <<std::endl;
+
+  if (!brief)
+  {
+    std::cout << "- fExt " <<std::endl;
+    if(_fExt) _fExt->display();
+    else std::cout << "-> NULL" <<std::endl;
+    std::cout << "- fInt " <<std::endl;
+    if(_fInt) _fInt->display();
+    else std::cout << "-> NULL" <<std::endl;
+    std::cout << "- K " <<std::endl;
+    if(_K) _K->display();
+    else std::cout << "-> NULL" <<std::endl;
+    std::cout << "- C " <<std::endl;
+    if(_C) _C->display();
+    else std::cout << "-> NULL" <<std::endl;
+    
+  }
+  std::cout << "===================================== " <<std::endl;
+}

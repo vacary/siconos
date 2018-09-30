@@ -76,44 +76,9 @@ void LagrangianLinearTIDS::initRhs(double time)
 
 }
 
-void LagrangianLinearTIDS::setK(const SiconosMatrix& newValue)
-{
-  if (newValue.size(0) != _ndof || newValue.size(1) != _ndof)
-    RuntimeException::selfThrow("LagrangianLinearTIDS - setK: inconsistent input matrix size ");
 
-  if (!_K)
-    _K.reset(new SimpleMatrix(newValue));
-  else
-    *_K = newValue;
-}
 
-void LagrangianLinearTIDS::setKPtr(SP::SiconosMatrix newPtr)
-{
-  if (newPtr->size(0) != _ndof || newPtr->size(1) != _ndof)
-    RuntimeException::selfThrow("LagrangianLinearTIDS - setKPtr: inconsistent input matrix size ");
-  _K = newPtr;
-}
-
-void LagrangianLinearTIDS::setC(const SiconosMatrix& newValue)
-{
-  if (newValue.size(0) != _ndof || newValue.size(1) != _ndof)
-    RuntimeException::selfThrow("LagrangianLinearTIDS - setC: inconsistent input matrix size ");
-
-  if (!_C)
-    _C.reset(new SimpleMatrix(newValue));
-  else
-    *_C = newValue;
-}
-
-void LagrangianLinearTIDS::setCPtr(SP::SiconosMatrix newPtr)
-{
-  if (newPtr->size(0) != _ndof || newPtr->size(1) != _ndof)
-    RuntimeException::selfThrow("LagrangianLinearTIDS - setCPtr: inconsistent input matrix size ");
-
-  _C = newPtr;
-}
-
-void LagrangianLinearTIDS::display() const
+void LagrangianLinearTIDS::display(bool brief) const
 {
   LagrangianDS::display();
   std::cout << "===== Lagrangian Linear Time Invariant System display ===== " <<std::endl;

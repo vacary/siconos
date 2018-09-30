@@ -877,10 +877,10 @@ void NewtonEulerDS::computeJacobianFIntq(double time, SP::SiconosVector q, SP::S
 {
   DEBUG_PRINT("NewtonEulerDS::computeJacobianFIntq(...) starts");
   if(_pluginJacqFInt->fPtr)
-    ((FInt_NE)_pluginJacqFInt->fPtr)(time, &(*q)(0), &(*twist)(0), &(*_jacobianFIntq)(0, 0), _qDim,  &(*_q0)(0));
+    ((FInt_NE)_pluginJacqFInt->fPtr)(time, &(*q)(0), &(*twist)(0), &(*_K)(0, 0), _qDim,  &(*_q0)(0));
   else if(_computeJacobianFIntqByFD)
     computeJacobianFIntqByFD(time, q, twist);
-  DEBUG_EXPR(_jacobianFIntq->display(););
+  DEBUG_EXPR(_K->display(););
   DEBUG_END("NewtonEulerDS::computeJacobianFIntq(...)");
 }
 
@@ -895,14 +895,14 @@ void NewtonEulerDS::computeJacobianFIntqByFD(double time, SP::SiconosVector q, S
   double fInt2 = fInt->getValue(2);
 
   SP::SiconosVector qeps(new SiconosVector(*q));
-  _jacobianFIntq->zero();
+  _K->zero();
   (*qeps)(0) += _epsilonFD;
   for(int j =0; j < 7; j++)
   {
     computeFInt(time, qeps, twist, fInt);
-    _jacobianFIntq->setValue(0,j, (fInt->getValue(0) - fInt0)/_epsilonFD);
-    _jacobianFIntq->setValue(1,j, (fInt->getValue(1) - fInt1)/_epsilonFD);
-    _jacobianFIntq->setValue(2,j, (fInt->getValue(2) - fInt2)/_epsilonFD);
+    _K->setValue(0,j, (fInt->getValue(0) - fInt0)/_epsilonFD);
+    _K->setValue(1,j, (fInt->getValue(1) - fInt1)/_epsilonFD);
+    _K->setValue(2,j, (fInt->getValue(2) - fInt2)/_epsilonFD);
     (*qeps)(j) -= _epsilonFD;
     if(j<6)(*qeps)(j+1) += _epsilonFD;
   }
@@ -1219,10 +1219,10 @@ void NewtonEulerDS::computeJacobianqForces(double time)
   if(_jacobianWrenchq)
   {
     _jacobianWrenchq->zero();
-    if(_jacobianFIntq)
+    if(_K)
     {
       computeJacobianFIntq(time);
-      _jacobianWrenchq->setBlock(0,0,-1.0 * *_jacobianFIntq);
+      _jacobianWrenchq->setBlock(0,0,-1.0 * *_K);
     }
     if(_jacobianMIntq)
     {
@@ -1317,7 +1317,7 @@ void NewtonEulerDS::computeJacobianMGyrtwist(double time)
 }
 
 
-void NewtonEulerDS::display() const
+void NewtonEulerDS::display(bool brief) const
 {
   std::cout << "=====> NewtonEuler System display (number: " << _number << ")." <<std::endl;
   std::cout << "- _ndof : " << _ndof <<std::endl;
@@ -1346,10 +1346,13 @@ void NewtonEulerDS::display() const
   std::cout << "- p[2] " <<std::endl;
   if(_p[2]) _p[2]->display();
   else std::cout << "-> NULL" <<std::endl;
-  std::cout << "mass :" <<  _scalarMass <<std::endl;
-  std::cout << "Inertia :" <<std::endl;
-  if(_I) _I->display();
-  else std::cout << "-> NULL" <<std::endl;
+  if (!brief)
+  {
+    std::cout << "mass :" <<  _scalarMass <<std::endl;
+    std::cout << "Inertia :" <<std::endl;
+    if(_I) _I->display();
+    else std::cout << "-> NULL" <<std::endl;
+  }
   std::cout << "===================================== " <<std::endl;
 }
 
@@ -1421,8 +1424,8 @@ void NewtonEulerDS::setComputeJacobianFIntqFunction(const std::string&  pluginPa
 {
   //    Plugin::setFunction(&computeJacobianFIntqPtr, pluginPath,functionName);
   _pluginJacqFInt->setComputeFunction(pluginPath, functionName);
-  if(!_jacobianFIntq)
-    _jacobianFIntq.reset(new SimpleMatrix(3, _qDim));
+  if(!_K)
+    _K.reset(new SimpleMatrix(3, _qDim));
   if(!_jacobianWrenchq)
     _jacobianWrenchq.reset(new SimpleMatrix(_ndof, _qDim));
 }
@@ -1437,8 +1440,8 @@ void NewtonEulerDS::setComputeJacobianFIntvFunction(const std::string&  pluginPa
 void NewtonEulerDS::setComputeJacobianFIntqFunction(FInt_NE fct)
 {
   _pluginJacqFInt->setComputeFunction((void *)fct);
-  if(!_jacobianFIntq)
-    _jacobianFIntq.reset(new SimpleMatrix(3, _qDim));
+  if(!_K)
+    _K.reset(new SimpleMatrix(3, _qDim));
   if(!_jacobianWrenchq)
     _jacobianWrenchq.reset(new SimpleMatrix(_ndof, _qDim));
 }

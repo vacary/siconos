@@ -177,6 +177,12 @@ protected:
 
   /** true if the  mass matrix is constant */
   bool _hasConstantMass;
+  
+ /** true if the  stifness matrix is constant */
+  bool _hasConstantK;
+  
+ /** true if the  damping matrix is constant */
+  bool _hasConstantC;
 
   /** inverse or factorization of the mass of the system */
   SP::SimpleMatrix _inverseMass;
@@ -190,11 +196,11 @@ protected:
   //                              Jacobian_Force_wrt_q, Jacobian_Forces_wrt_qDot,
   //                              numberOfJacobians};
 
-  /** jacobian_q FInt*/
-  SP::SiconosMatrix _jacobianFIntq;
+  /** jacobian_q FInt : Tangent Stiffness matrix*/
+  SP::SiconosMatrix _K;
 
-  /** jacobian_{qDot} FInt*/
-  SP::SiconosMatrix _jacobianFIntqDot;
+  /** jacobian_{qDot} FInt Tangent Damping matrix*/
+  SP::SiconosMatrix _C;
 
   /** external forces applied to the system */
   SP::SiconosVector _fExt;
@@ -208,6 +214,7 @@ protected:
 
   /** jacobian_q FGyrq*/
   SP::SiconosMatrix _jacobianFGyrq;
+
   /** jacobian_{qDot} FGyrq*/
   SP::SiconosMatrix _jacobianFGyrqDot;
 
@@ -621,7 +628,7 @@ public:
    */
   inline SP::SiconosMatrix jacobianFIntq() const
   {
-    return _jacobianFIntq;
+    return _K;
   }
 
   /** get \f$\nabla_{\dot q}F_{int}\f$, (pointer link)
@@ -629,7 +636,7 @@ public:
    */
   inline SP::SiconosMatrix jacobianFIntqDot() const
   {
-    return _jacobianFIntqDot;
+    return _C;
   }
 
   /** set \f$\nabla_{q}F_{int}\f$, (pointer link)
@@ -637,7 +644,7 @@ public:
    */
   inline void setJacobianFIntqPtr(SP::SiconosMatrix newPtr)
   {
-    _jacobianFIntq = newPtr;
+    _K = newPtr;
   }
 
   /** set \f$\nabla_{\dot q}F_{int}\f$, (pointer link)
@@ -645,7 +652,68 @@ public:
    */
   inline void setJacobianFIntqDotPtr(SP::SiconosMatrix newPtr)
   {
-    _jacobianFIntqDot = newPtr;
+    _C = newPtr;
+  }
+  /** get a copy of the stiffness matrix
+   *  \return SimpleMatrix
+   */
+  inline const SimpleMatrix getK() const
+  {
+    return *_K;
+  }
+
+  /** get \f$\nabla_qF_{int}\f$, (pointer link)
+   *  \return pointer on a SiconosMatrix
+   */
+  inline SP::SiconosMatrix K() const
+  {
+    return _K;
+  }
+
+  /** get \f$\nabla_{\dot q}F_{int}\f$, (pointer link)
+   *  \return pointer on a SiconosMatrix
+   */
+  inline SP::SiconosMatrix C() const
+  {
+    return _C;
+  }
+  /** set (copy) the value of the stiffness matrix
+   *  \param K new stiffness matrix
+   */
+  void setK(const SiconosMatrix& K);
+
+  /** set \f$\nabla_{q}F_{int}\f$, (pointer link)
+   *  \param newPtr a SP SiconosMatrix
+   */
+  inline void setKPtr(SP::SiconosMatrix newPtr)
+  {
+
+    _K = newPtr;
+    _hasConstantK = true;
+    if(!_fInt)
+      _fInt.reset(new SiconosVector(_ndof));
+    if(!_jacobianqForces)
+    {
+      _jacobianqForces.reset(new SimpleMatrix(*_K));
+    }
+    init_forces();
+  }
+  /** set (copy) the value of the damping matrix
+   *  \param C new damping matrix
+   */
+  void setC(const SiconosMatrix& C);
+
+  /** set \f$\nabla_{\dot q}F_{int}\f$, (pointer link)
+   *  \param newPtr a SP SiconosMatrix
+   */
+  inline void setCPtr(SP::SiconosMatrix newPtr)
+  {
+    _C = newPtr;
+    _hasConstantC = true;
+    if(!_fInt)
+      _fInt.reset(new SiconosVector(_ndof));
+    init_forces();
+
   }
 
   /** get \f$\nabla_{q}F_{gyr}\f$, (pointer link)
@@ -792,6 +860,9 @@ public:
     if(!_fInt)
       _fInt.reset(new SiconosVector(_ndof));
     //    Plugin::setFunction(&computeFIntPtr, pluginPath,functionName);
+    _hasConstantC = false;
+    _hasConstantK = false;
+
   }
 
   /** set a specified function to compute fInt
@@ -803,6 +874,8 @@ public:
     if(!_fInt)
       _fInt.reset(new SiconosVector(_ndof));
     //    computeFIntPtr = fct;
+    _hasConstantC = false;
+    _hasConstantK = false;
   }
 
   /** allow to set a specified function to compute Fext
@@ -908,6 +981,11 @@ public:
    */
   virtual void computeFExt(double time);
 
+  /** default function to compute the external strengths
+   *  \param time the current time
+   */
+  virtual void computeFExt(double time, SP::SiconosVector fExt);
+
   /** default function to compute the inertia
    */
   virtual void computeFGyr();
@@ -980,9 +1058,10 @@ public:
   /** To compute the kinetic energy */
   double computeKineticEnergy();
 
+
   /** print the data of the dynamical system on the standard output
    */
-  void display() const;
+  void display(bool brief = true) const;
 
   /** Computes post-impact velocity, using pre-impact velocity and impulse (p) value.
    * Used in EventDriven (LsodarOSI->updateState)

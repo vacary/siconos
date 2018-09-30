@@ -234,7 +234,7 @@ protected:
   SP::SiconosVector _mInt;
 
   /** jacobian_q FInt  w.r.t q*/
-  SP::SimpleMatrix _jacobianFIntq;
+  SP::SimpleMatrix _K;
 
   /** jacobian_twist FInt  w.r.t the twist*/
   SP::SimpleMatrix _jacobianFInttwist;
@@ -756,7 +756,7 @@ public:
 
   /** print the data to the screen
    */
-  void display() const;
+  void display(bool brief = true) const;
 
   //  inline SP::SiconosMatrix jacobianZFL() const { return jacobianZFL; }
 

@@ -103,12 +103,6 @@ protected:
   /* serialization hooks */
   ACCEPT_SERIALIZATION(LagrangianLinearTIDS);
 
-  /** stiffness matrix */
-  SP::SiconosMatrix _K;
-
-  /** damping matrix */
-  SP::SiconosMatrix _C;
-
   /** default constructor */
   LagrangianLinearTIDS():LagrangianDS() {};
 
@@ -154,54 +148,6 @@ public:
   /*! @name Attributes access
     @{ */
 
-  /** get a copy of the stiffness matrix
-   *  \return SimpleMatrix
-   */
-  inline const SimpleMatrix getK() const
-  {
-    return *_K;
-  }
-
-  /** get stiffness matrix (pointer link)
-   *  \return pointer on a SiconosMatrix
-   */
-  inline SP::SiconosMatrix K() const
-  {
-    return _K;
-  }
-
-  /** set (copy) the value of the stiffness matrix
-   *  \param K new stiffness matrix
-   */
-  void setK(const SiconosMatrix& K);
-
-  /** set stiffness matrix (pointer link)
-   *  \param newPtr pointer to the new Stiffness matrix
-   */
-  void setKPtr(SP::SiconosMatrix newPtr);
-  
-  /** get a copy of the damping matrix
-   *  \return SimpleMatrix
-   */
-  inline const SimpleMatrix getC() const { return *_C; }
-
-  /** get damping matrix (pointer link)
-   *  \return pointer on a SiconosMatrix
-   */
-  inline SP::SiconosMatrix C() const
-  {
-    return _C;
-  }
-
-  /** set (copy) the value of the damping matrix
-   *  \param C new damping matrix
-   */
-  void setC(const SiconosMatrix& C);
-
-  /** set damping matrix (pointer link)
-   * \param newPtr pointer to the new damping matrix
-   */
-  void setCPtr(SP::SiconosMatrix newPtr) ;
 
   /** get \f$ \nabla_qF(v,q,t,z)\f$ (pointer  link)
    *  \return pointer on a SiconosMatrix
@@ -233,7 +179,7 @@ public:
 
   /** print the data onto the screen
    */
-  void display() const;
+  void display(bool brief = true) const;
 
   ///@}
   
