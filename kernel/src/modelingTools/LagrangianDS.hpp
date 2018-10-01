@@ -971,10 +971,12 @@ public:
    *  \param time the current time,
    *  \param position value used to evaluate the internal forces
    *  \param velocity value used to evaluate the internal forces
+   *  \param the computed fInt
    */
   virtual void computeFInt(double time,
                            SP::SiconosVector position,
-                           SP::SiconosVector velocity);
+                           SP::SiconosVector velocity,
+                           SP::SiconosVector fInt);
 
   /** default function to compute the external strengths
    *  \param time the current time

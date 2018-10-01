@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 #include "LagrangianDS.hpp"
 #include "BlockVector.hpp"
 #include "BlockMatrix.hpp"
@@ -360,15 +360,54 @@ void LagrangianDS::computeMass(SP::SiconosVector position)
   }
 }
 
-/** This function has been added to avoid Swig director to wrap _FInt into numpy.array
- *  when we call  LagrangianDS::computeFInt(double time, SP::SiconosVector fInt)
- *  that calls in turn computeFInt(time, ...;
+/** This function has been added to avoid Swig director to wrap _fExt into
+ * numpy.array when we call
+ * LagrangianDS::computeFExt(double time, SP::SiconosVector fExt)
+ * that calls in turn computeFExt(time, _fExt);
  */
+static
+void computeFExt_internal(double time, bool hasConstantFExt,
+                          unsigned int ndof,
+                          SP::PluggedObject pluginFExt, SP::SiconosVector fExt_attributes,
+                          SP::SiconosVector fExt,
+                          SP::SiconosVector z)
+{
+/* if the pointer has been set to an external vector
+ * after setting the plugin, we do not call the plugin */
+  if(hasConstantFExt)
+  {
+    if(fExt != fExt_attributes)
+      *fExt = *fExt_attributes;
+  }
+  else if(pluginFExt->fPtr)
+    ((VectorFunctionOfTime)pluginFExt->fPtr)(time, ndof, &(*fExt)(0), z->size(), &(*z)(0));
+
+}
+
+void LagrangianDS::computeFExt(double time)
+{
+  computeFExt_internal(time,_hasConstantFExt,
+                       _ndof,
+                       _pluginFExt, _fExt, _fExt, _z);
+}
+
+void LagrangianDS::computeFExt(double time, SP::SiconosVector fExt)
+{
+  computeFExt_internal(time,_hasConstantFExt,
+                       _ndof,
+                       _pluginFExt, _fExt, fExt, _z);
+}
+
+/** This function has been added to avoid Swig director to wrap _FInt into
+* numpy.array  when we call
+*  LagrangianDS::computeFInt(double time, SP::SiconosVector fInt)
+* that calls in turn computeFInt(time, ...;
+*/
 static
 void computeFInt_internal(double time, bool hasConstantK, bool hasConstantC,
                           unsigned int ndof,
                           SP::SiconosVector q, SP::SiconosVector v,
-                          SP::SiconosMatrix K, SP::SiconosMatrix C, 
+                          SP::SiconosMatrix K, SP::SiconosMatrix C,
                           SP::PluggedObject pluginFInt, SP::SiconosVector fInt_attributes,
                           SP::SiconosVector fInt,
                           SP::SiconosVector z)
@@ -384,12 +423,9 @@ void computeFInt_internal(double time, bool hasConstantK, bool hasConstantC,
       prod(1.0, *K , *q, *fInt, false);
     if (hasConstantC)
       prod(1.0, *C , *v, *fInt, false);
-    
   }
   else if(pluginFInt->fPtr)
     ((FPtr6)pluginFInt->fPtr)(time, ndof, &(*q)(0), &(*v)(0), &(*fInt)(0), z->size(), &(*z)(0));
-  
-
 }
 
 void LagrangianDS::computeFInt(double time)
@@ -401,50 +437,16 @@ void LagrangianDS::computeFInt(double time)
                        _pluginFInt, _fInt, _fInt, _z);
 }
 
-void LagrangianDS::computeFInt(double time, SP::SiconosVector position, SP::SiconosVector velocity)
+void LagrangianDS::computeFInt(double time,
+                               SP::SiconosVector position,
+                               SP::SiconosVector velocity,
+                               SP::SiconosVector fInt)
 {
   computeFInt_internal(time, _hasConstantK, _hasConstantC,
                        _ndof,
                        position, velocity,
                        _K,_C,
-                       _pluginFInt, _fInt, _fInt, _z);
-}
-
-/** This function has been added to avoid Swig director to wrap _MExt into numpy.array
- *  when we call  LagrangianDS::computeFExt(double time, SP::SiconosVector fExt)
- *  that calls in turn computeFExt(time, _fExt);
- */
-static
-void computeFExt_internal(double time, bool hasConstantFExt,
-                          unsigned int ndof,
-                          SP::PluggedObject pluginFExt, SP::SiconosVector fExt_attributes,
-                          SP::SiconosVector fExt,
-                          SP::SiconosVector z)
-{
-  /* if the pointer has been set to an external vector
-   * after setting the plugin, we do not call the plugin */
-  if(hasConstantFExt)
-  {
-    if(fExt != fExt_attributes)
-      *fExt = *fExt_attributes;
-  }
-  else if(pluginFExt->fPtr)
-    ((VectorFunctionOfTime)pluginFExt->fPtr)(time, ndof, &(*fExt)(0), z->size(), &(*z)(0));
-
-}
-
-void LagrangianDS::computeFExt(double time)
-{
-  computeFExt_internal(time,_hasConstantFExt,
-                       _ndof, 
-                       _pluginFExt, _fExt, _fExt, _z);
-}
-
-void LagrangianDS::computeFExt(double time, SP::SiconosVector fExt)
-{
-  computeFExt_internal(time,_hasConstantFExt,
-                       _ndof,
-                       _pluginFExt, _fExt, fExt, _z); 
+                       _pluginFInt, _fInt, fInt, _z);
 }
 
 
@@ -461,6 +463,7 @@ void LagrangianDS::computeFGyr(SP::SiconosVector position, SP::SiconosVector vel
   if(_fGyr && _pluginFGyr->fPtr)
     ((FPtr5)_pluginFGyr->fPtr)(_ndof, &(*position)(0), &(*velocity)(0), &(*_fGyr)(0), _z->size(), &(*_z)(0));
 }
+
 void LagrangianDS::setK(const SiconosMatrix& newValue)
 {
   if (newValue.size(0) != _ndof || newValue.size(1) != _ndof)
@@ -471,7 +474,6 @@ void LagrangianDS::setK(const SiconosMatrix& newValue)
   else
     *_K = newValue;
 }
-
 
 void LagrangianDS::setC(const SiconosMatrix& newValue)
 {
@@ -519,15 +521,21 @@ void LagrangianDS::computeJacobianFIntq(double time, SP::SiconosVector position,
   DEBUG_BEGIN("LagrangianDS::computeJacobianFIntq()\n");
   DEBUG_EXPR(position->display());
   DEBUG_EXPR(velocity->display());
-  if(_K && _pluginJacqFInt->fPtr)
-    ((FPtr6)_pluginJacqFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_K)(0, 0), _z->size(), &(*_z)(0));
+  if (!_hasConstantK)
+  {
+    if(_K && _pluginJacqFInt->fPtr)
+      ((FPtr6)_pluginJacqFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_K)(0, 0), _z->size(), &(*_z)(0));
+  }
   DEBUG_EXPR(if(_K) _K->display(););
   DEBUG_END("LagrangianDS::computeJacobianFIntq()\n");
 }
 void LagrangianDS::computeJacobianFIntqDot(double time, SP::SiconosVector position, SP::SiconosVector velocity)
 {
-  if(_C && _pluginJacqDotFInt->fPtr)
-    ((FPtr6)_pluginJacqDotFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_C)(0, 0), _z->size(), &(*_z)(0));
+  if (!_hasConstantC)
+  {
+    if(_C && _pluginJacqDotFInt->fPtr)
+      ((FPtr6)_pluginJacqDotFInt->fPtr)(time, _ndof, &(*position)(0), &(*velocity)(0), &(*_C)(0, 0), _z->size(), &(*_z)(0));
+  }
 }
 
 void LagrangianDS::computeJacobianFGyrq()
@@ -618,7 +626,9 @@ void LagrangianDS::computeJacobianRhsx(double time)
   }
 }
 
-void LagrangianDS::computeForces(double time, SP::SiconosVector position, SP::SiconosVector velocity)
+void LagrangianDS::computeForces(double time,
+                                 SP::SiconosVector position,
+                                 SP::SiconosVector velocity)
 {
   if(!_forces)
   {
@@ -628,7 +638,7 @@ void LagrangianDS::computeForces(double time, SP::SiconosVector position, SP::Si
     _forces->zero();
 
   // 1 - Computes the required function
-  computeFInt(time, position, velocity);
+  computeFInt(time, position, velocity, _fInt);
   computeFExt(time);
   computeFGyr(position, velocity);
 
@@ -921,7 +931,7 @@ void LagrangianDS::display(bool brief) const
     std::cout << "- C " <<std::endl;
     if(_C) _C->display();
     else std::cout << "-> NULL" <<std::endl;
-    
+
   }
   std::cout << "===================================== " <<std::endl;
 }
