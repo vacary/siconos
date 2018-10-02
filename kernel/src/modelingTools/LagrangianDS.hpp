@@ -178,12 +178,6 @@ protected:
   /** true if the  mass matrix is constant */
   bool _hasConstantMass;
   
- /** true if the  stifness matrix is constant */
-  bool _hasConstantK;
-  
- /** true if the  damping matrix is constant */
-  bool _hasConstantC;
-
   /** inverse or factorization of the mass of the system */
   SP::SimpleMatrix _inverseMass;
 
@@ -201,7 +195,13 @@ protected:
 
   /** jacobian_{qDot} FInt Tangent Damping matrix*/
   SP::SiconosMatrix _C;
-
+  
+  /** true if the  stifness matrix is constant */
+  bool _hasConstantK;
+  
+  /** true if the  damping matrix is constant */
+  bool _hasConstantC;
+  
   /** external forces applied to the system */
   SP::SiconosVector _fExt;
 
@@ -685,19 +685,8 @@ public:
   /** set \f$\nabla_{q}F_{int}\f$, (pointer link)
    *  \param newPtr a SP SiconosMatrix
    */
-  inline void setKPtr(SP::SiconosMatrix newPtr)
-  {
-
-    _K = newPtr;
-    _hasConstantK = true;
-    if(!_fInt)
-      _fInt.reset(new SiconosVector(_ndof));
-    if(!_jacobianqForces)
-    {
-      _jacobianqForces.reset(new SimpleMatrix(*_K));
-    }
-    init_forces();
-  }
+  void setKPtr(SP::SiconosMatrix newPtr);
+  
   /** set (copy) the value of the damping matrix
    *  \param C new damping matrix
    */
@@ -706,15 +695,7 @@ public:
   /** set \f$\nabla_{\dot q}F_{int}\f$, (pointer link)
    *  \param newPtr a SP SiconosMatrix
    */
-  inline void setCPtr(SP::SiconosMatrix newPtr)
-  {
-    _C = newPtr;
-    _hasConstantC = true;
-    if(!_fInt)
-      _fInt.reset(new SiconosVector(_ndof));
-    init_forces();
-
-  }
+  void setCPtr(SP::SiconosMatrix newPtr);
 
   /** get \f$\nabla_{q}F_{gyr}\f$, (pointer link)
    *  \return pointer on a SiconosMatrix
@@ -758,10 +739,7 @@ public:
   /** get \f$ \nabla_qF(v,q,t,z)\f$ (pointer  link)
    *  \return pointer on a SiconosMatrix
    */
-  virtual inline SP::SiconosMatrix jacobianqForces() const
-  {
-    return _jacobianqForces;
-  }
+  virtual SP::SiconosMatrix jacobianqForces() const;
 
   /** get \f$ \nabla_{\dot q}F(v,q,t,z)\f$ (pointer  link)
    *  \return pointer on a SiconosMatrix

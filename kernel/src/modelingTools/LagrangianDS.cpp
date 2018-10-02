@@ -157,7 +157,10 @@ void LagrangianDS::init_forces()
       DEBUG_EXPR(_jacobianqForces->display(););
     }
     if(!_jacobianqDotForces)
+    {
+      /* Warning: we are forcing the dense storage */
       _jacobianqDotForces.reset(new SimpleMatrix(_ndof, _ndof));
+    }
   }
   DEBUG_END("LagrangianDS::init_forces()\n");
 }
@@ -468,11 +471,36 @@ void LagrangianDS::setK(const SiconosMatrix& newValue)
 {
   if (newValue.size(0) != _ndof || newValue.size(1) != _ndof)
     RuntimeException::selfThrow("LagrangianLinearTIDS - setK: inconsistent input matrix size ");
-
   if (!_K)
     _K.reset(new SimpleMatrix(newValue));
   else
     *_K = newValue;
+  _hasConstantK = true;
+
+  if(!_fInt)
+    _fInt.reset(new SiconosVector(_ndof));
+  
+  if(!_forces)
+      _forces.reset(new SiconosVector(_ndof));
+  
+  if(!_jacobianqForces)
+  {
+    _jacobianqForces.reset(new SimpleMatrix(*_K));
+  }
+}
+
+void LagrangianDS::setKPtr(SP::SiconosMatrix newPtr)
+{
+  _K = newPtr;
+  _hasConstantK = true;
+  if(!_fInt)
+    _fInt.reset(new SiconosVector(_ndof));
+  if(!_forces)
+    _forces.reset(new SiconosVector(_ndof));
+  if(!_jacobianqForces)
+  {
+    _jacobianqForces.reset(new SimpleMatrix(*_K));
+  }
 }
 
 void LagrangianDS::setC(const SiconosMatrix& newValue)
@@ -484,8 +512,31 @@ void LagrangianDS::setC(const SiconosMatrix& newValue)
     _C.reset(new SimpleMatrix(newValue));
   else
     *_C = newValue;
+  _hasConstantC = true;
+  if(!_fInt)
+    _fInt.reset(new SiconosVector(_ndof));
+  if(!_forces)
+    _forces.reset(new SiconosVector(_ndof));
+  if(!_jacobianqDotForces)
+  {
+    _jacobianqDotForces.reset(new SimpleMatrix(*_C));
+  }
 }
 
+void LagrangianDS::setCPtr(SP::SiconosMatrix newPtr)
+{
+  _C = newPtr;
+  _hasConstantC = true;
+  if(!_fInt)
+    _fInt.reset(new SiconosVector(_ndof));
+  if(!_forces)
+    _forces.reset(new SiconosVector(_ndof));
+  if(!_jacobianqDotForces)
+  {
+    _jacobianqDotForces.reset(new SimpleMatrix(*_C));
+  }
+  
+}
 void LagrangianDS::computeJacobianFIntq(double time)
 {
   DEBUG_BEGIN("LagrangianDS::computeJacobianFIntq()\n");
@@ -659,6 +710,15 @@ void LagrangianDS::computeForces(double time,
     *_forces -= *_fGyr;
   // }
 
+}
+
+SP::SiconosMatrix LagrangianDS::jacobianqForces() const
+{
+  DEBUG_BEGIN("SP::SiconosMatrix LagrangianDS::jacobianqForces()\n");
+  DEBUG_EXPR(std::cout << "_jacobianqForces.get()" << _jacobianqForces.get() << std::endl;);
+  DEBUG_EXPR(_jacobianqForces->display(););
+  DEBUG_END("SP::SiconosMatrix LagrangianDS::jacobianqForces()\n");
+  return _jacobianqForces;
 }
 
 void LagrangianDS::computeJacobianqForces(double time)
