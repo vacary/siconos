@@ -437,15 +437,62 @@ def test_bouncing_ball4():
     ball_d.computeFExt(t0)
     run_simulation_with_two_ds(ball, ball_d, t0)
 
-    
+def test_bouncing_ball5():
+    """Run a complete simulation (Bouncing ball example)
+    LagrangianDS,  plugged Fext.
+    """
+
+    t0 = 0       # start time
+    r = 0.1      # ball radius
+    g = 9.81     # gravity
+    m = 1        # ball mass
+    #
+    # dynamical system
+    #
+    x = np.zeros(3, dtype=np.float64)
+    x[0] = 1.
+    v = np.zeros_like(x)
+    # mass matrix
+    mass = np.eye(3, dtype=np.float64)
+    mass[2, 2] = 3. / 5 * r * r
+
+    # the dynamical system
+    ball = sk.LagrangianLinearTIDS(x, v, mass)
+
+    stiffness = np.eye(3, dtype=np.float64)
+    ball.setKPtr(stiffness)
+    weight = np.zeros(ball.dimension())
+    weight[0] = -m * g
+    #ball.setFExtPtr(weight)
+
+    # a ball with its own computeFExt
+    class Ball(sk.LagrangianDS):
+        def __init__(self,x, v, mass, stiffness):
+            sk.LagrangianDS.__init__(self,x,v,mass)
+            self.setKPtr(stiffness)
+            
+        def computeFExt(self, t):
+            """External forces operator computation
+            """
+            print("computing FExt at t=", t)
+            #self._fExt[0] = -m * g
+            weight = np.zeros(self.dimension())
+            weight[0] = -m * g
+            #self.setFExtPtr(weight)
+
+    ball_d = Ball(x.copy(), v.copy(), mass, stiffness)
+    ball_d.computeFExt(t0)
+    run_simulation_with_two_ds(ball, ball_d, t0)   
  
 
 if __name__ == "__main__":
     # execute only if run as a script
-    test_bouncing_ball1()
-    test_bouncing_ball2()
-    test_bouncing_ball3()
-    test_bouncing_ball4()
+    #test_bouncing_ball1()
+    #test_bouncing_ball2()
+    #test_bouncing_ball3()
+    #test_bouncing_ball4()
+    #test_bouncing_ball4()
+    test_bouncing_ball5()
 
     
 
