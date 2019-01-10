@@ -30,9 +30,9 @@
 #include "NonSmoothDynamicalSystem.hpp"
 #include "OneStepNSProblem.hpp"
 
-// #define DEBUG_NOCOLOR
-// #define DEBUG_STDOUT
-// #define DEBUG_MESSAGES
+#define DEBUG_NOCOLOR
+#define DEBUG_STDOUT
+#define DEBUG_MESSAGES
 #include "debug.h"
 
 #include <boost/make_shared.hpp>
@@ -89,8 +89,8 @@ double D1MinusLinearOSI::computeResiduHalfExplicitAccelerationLevel()
       std11::shared_ptr<SiconosVector> pqold(&*(SiconosVector*)&qold, null_deleter);
       std11::shared_ptr<SiconosVector> pvold(&*(SiconosVector*)&vold, null_deleter);
       DEBUG_EXPR(accFree.display());
-      DEBUG_EXPR(qold->display());
-      DEBUG_EXPR(vold->display());
+      DEBUG_EXPR(qold.display());
+      DEBUG_EXPR(vold.display());
 
       /* compute the force and store in accFree */
       d->computeForces(told, pqold, pvold);
@@ -128,8 +128,8 @@ double D1MinusLinearOSI::computeResiduHalfExplicitAccelerationLevel()
       std11::shared_ptr<SiconosVector> pvold(&*(SiconosVector*)&vold, null_deleter);
 
       DEBUG_EXPR(accFree.display());
-      DEBUG_EXPR(qold->display());
-      DEBUG_EXPR(vold->display());
+      DEBUG_EXPR(qold.display());
+      DEBUG_EXPR(vold.display());
 
       work_tdg =  workVectors[D1MinusLinearOSI::FREE_TDG];
       work_tdg->zero();
@@ -276,8 +276,8 @@ double D1MinusLinearOSI::computeResiduHalfExplicitAccelerationLevel()
       v.zero();
 
       DEBUG_EXPR(accFree.display());
-      DEBUG_EXPR(qold->display());
-      DEBUG_EXPR(vold->display());
+      DEBUG_EXPR(qold.display());
+      DEBUG_EXPR(vold.display());
 
 
       residuFree -= 0.5 * h*accFree;
@@ -711,7 +711,7 @@ void D1MinusLinearOSI::computeFreeOutputHalfExplicitAccelerationLevel(Interactio
     else if(relationType == NewtonEuler)
     {
       Xfree = DSlink[NewtonEulerR::velocity];
-      DEBUG_PRINT("Xfree = DSlink[LagrangianR::vecocity];\n");
+      DEBUG_PRINT("Xfree = DSlink[NewtonEuler::velocity];\n");
     }
     else
       RuntimeException::selfThrow("D1MinusLinearOSI::computeFreeOutput - unknown relation type.");
@@ -725,15 +725,15 @@ void D1MinusLinearOSI::computeFreeOutputHalfExplicitAccelerationLevel(Interactio
     /* get the "free" acceleration of the aggregated ds */
     if(relationType == Lagrangian)
     {
-      Xfree = DSlink[D1MinusLinearOSI::xfree];
+      Xfree = DSlink[D1MinusLinearOSI::FREE];
     }
     else if(relationType == NewtonEuler)
     {
-      Xfree = DSlink[D1MinusLinearOSI::xfree];
+      Xfree = DSlink[D1MinusLinearOSI::FREE];
     }
     else
       RuntimeException::selfThrow("D1MinusLinearOSI::computeFreeOutput - unknown relation type.");
-    DEBUG_PRINT("Xfree = DSlink[LagrangianR::xfree];\n");
+    DEBUG_PRINT("Xfree = DSlink[D1MinusLinearOSI::FREE];\n");
     DEBUG_EXPR(Xfree->display());
     assert(Xfree);
   }
