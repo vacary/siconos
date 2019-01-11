@@ -677,7 +677,7 @@ void D1MinusLinearOSI::computeFreeOutputHalfExplicitAccelerationLevel(Interactio
   SP::InteractionsGraph indexSet = osnsp->simulation()->indexSet(osnsp->indexSetLevel());
   SP::Interaction inter = indexSet->bundle(vertex_inter);
   VectorOfBlockVectors& DSlink = inter->linkToDSVariables();
-  VectorOfBlockVectors& inter_work_block = *indexSet.properties(vertex_inter).workBlockVectors;
+  VectorOfBlockVectors& inter_work_block = *indexSet->properties(vertex_inter).workBlockVectors;
 
   // get relation and non smooth law information
   RELATION::TYPES relationType = inter->relation()->getType(); // relation
