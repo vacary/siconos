@@ -25,9 +25,9 @@
 
 #include "BlockVector.hpp"
 #include "SimulationGraphs.hpp"
-// #define DEBUG_MESSAGES
-// #define DEBUG_STDOUT
-// #define DEBUG_NOCOLOR
+#define DEBUG_MESSAGES
+#define DEBUG_STDOUT
+#define DEBUG_NOCOLOR
 #include "debug.h"
 
 
@@ -160,12 +160,10 @@ void LagrangianScleronomousR::computeOutput(double time, Interaction& inter,  un
     {
       if(!_dotjachq)
       {
-        if(_plugindotjacqh && _plugindotjacqh->fPtr)
-        {
-          unsigned int sizeY = inter.dimension();
-          unsigned int sizeDS = inter.getSizeOfDS();
+	      unsigned int sizeY = inter.dimension();
+	      unsigned int sizeDS = inter.getSizeOfDS();
           _dotjachq.reset(new SimpleMatrix(sizeY, sizeDS));
-        }
+
       }
 
       SiconosVector qDot;
@@ -173,6 +171,8 @@ void LagrangianScleronomousR::computeOutput(double time, Interaction& inter,  un
       computeDotJachq(q, z, qDot);
       assert(_jachq);
       prod(*_jachq, *DSlink[LagrangianR::q2], y);
+      assert(_dotjachq);
+      DEBUG_EXPR(_dotjachq->display());
       prod(*_dotjachq, *DSlink[LagrangianR::q1], y, false);
     }
     else
