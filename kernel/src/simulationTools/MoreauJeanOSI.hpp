@@ -155,7 +155,7 @@ public:
 
   enum MoreauJeanOSI_ds_workVector_id{RESIDU_FREE, VFREE, BUFFER, QTMP, WORK_LENGTH};
 
-  enum MoreauJeanOSI_interaction_workVector_id{OSNSP_RHS,WORK_INTERACTION_LENGTH};
+  enum MoreauJeanOSI_interaction_workVector_id{OSNSP_RHS, OSNSP_RHS_COHESION, WORK_INTERACTION_LENGTH};
 
   enum MoreauJeanOSI_interaction_workBlockVector_id{xfree, BLOCK_WORK_LENGTH};
 
@@ -433,6 +433,10 @@ public:
    *  \param level the level of interest for the dynamics: not used at the time
    */
   virtual void updateState(const unsigned int level);
+
+  /** update the state of the nonsmooth law
+   */
+  virtual void updateNonSmoothLaw();
 
   /** Displays the data of the MoreauJeanOSI's integrator
    */

@@ -374,6 +374,10 @@ public:
    */
   void updateState() { updateState(0); }
 
+  /** update the state of the nonsmooth law
+   */
+  virtual void updateNonSmoothLaw() {};
+
   /** update the output of the Interaction attached to this Integrator
    */
   virtual void updateOutput(double time);

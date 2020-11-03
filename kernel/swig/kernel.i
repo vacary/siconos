@@ -336,7 +336,18 @@ KERNEL_REGISTRATION()
   {
     return std::dynamic_pointer_cast<NewtonImpactNSL>(nslaw);
   }
+  
+  SP::CohesiveZoneModelNIFNSL cast_CohesiveZoneModelNIFNSL(SP::NonSmoothLaw nslaw)
+  {
+    return std::dynamic_pointer_cast<CohesiveZoneModelNIFNSL>(nslaw);
+  }
+  
+  SP::CohesiveZoneModelNIFNSL cast_CohesiveZoneModelNIFNSL(SP::NewtonImpactFrictionNSL nslaw)
+  {
+    return std::dynamic_pointer_cast<CohesiveZoneModelNIFNSL>(nslaw);
+  }
 
+  
   SP::NewtonEulerDS cast_NewtonEulerDS(SP::DynamicalSystem ds)
   {
     return std::dynamic_pointer_cast<NewtonEulerDS>(ds);

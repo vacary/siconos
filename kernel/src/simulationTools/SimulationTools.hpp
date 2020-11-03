@@ -26,12 +26,20 @@ Note that not all files from the current location are listed below, since some o
 #include "EventsManager.hpp"
 #include "EventFactory.hpp"
 #include "TimeDiscretisation.hpp"
+
+
+//Simulation classes
 #include "TimeStepping.hpp"
 #include "TimeSteppingD1Minus.hpp"
 #include "TimeSteppingDirectProjection.hpp"
 #include "TimeSteppingCombinedProjection.hpp"
+
+
+
 #include "InteractionManager.hpp"
 
+
+// OneStepNSProblem classes
 #include "Equality.hpp"
 #include "LCP.hpp"
 #include "MultipleImpact.hpp"
@@ -39,13 +47,15 @@ Note that not all files from the current location are listed below, since some o
 #include "MLCPProjectOnConstraints.hpp"
 #include "AVI.hpp"
 #include "GenericMechanical.hpp"
-//#include "mlcpDefaultSolver.hpp"
 #include "QP.hpp"
 #include "Relay.hpp"
 #include "FrictionContact.hpp"
 #include "RollingFrictionContact.hpp"
 #include "GlobalFrictionContact.hpp"
+#include "CohesiveFrictionContact.hpp"
 
+
+// OneStepIntegrator classes
 #include "LsodarOSI.hpp"
 #include "Hem5OSI.hpp"
 #include "MoreauJeanOSI.hpp"
@@ -57,11 +67,11 @@ Note that not all files from the current location are listed below, since some o
 #include "D1MinusLinearOSI.hpp"
 #include "SchatzmanPaoliOSI.hpp"
 #include "ZeroOrderHoldOSI.hpp"
-
 #include "MoreauJeanGOSI.hpp"
+#include "MatrixIntegrator.hpp"
 
 #include "NonSmoothEvent.hpp"
 #include "TimeDiscretisationEvent.hpp"
 #include "BlockCSRMatrix.hpp"
-#include "MatrixIntegrator.hpp"
+
 #include "ExtraAdditionalTerms.hpp"

@@ -78,7 +78,8 @@
   REGISTER(SiconosConvexHull2d)                  \
   REGISTER(SiconosCollisionQueryResult)         \
   REGISTER(SiconosCollisionManager)             \
-  REGISTER(SiconosBulletCollisionManager)
+  REGISTER(SiconosBulletCollisionManager)       \
+  REGISTER(BinaryCohesiveNSL)
 
 #include <SiconosVisitables.hpp>
 

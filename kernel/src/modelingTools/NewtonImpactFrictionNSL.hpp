@@ -42,6 +42,7 @@ private:
   /** friction coefficient */
   double _mu;
 
+protected:
   /** default constructor
    */
   NewtonImpactFrictionNSL();

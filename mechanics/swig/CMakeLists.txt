@@ -11,6 +11,7 @@ set(${COMPONENT}_SWIG_DEFS "${SWIG_DEFS}")
 # List of modules to be built in the python bindings
 set(${COMPONENT}_PYTHON_MODULES
   "mechanics/joints"
+  "mechanics/czm"
   "mechanics/collision/base"
   "mechanics/collision/native"
   "mechanics/collision/bodies")

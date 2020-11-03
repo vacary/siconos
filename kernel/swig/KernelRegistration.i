@@ -12,8 +12,9 @@
   PY_REGISTER(EqualityConditionNSL, Kernel);                                    \
   PY_REGISTER(MultipleImpactNSL, Kernel);                                       \
   PY_REGISTER(RelayNSL, Kernel);                                                \
-  PY_REGISTER(NormalConeNSL, Kernel);                                           \
-  PY_REGISTER(DynamicalSystem, Kernel);                                         \
+  PY_REGISTER(NormalConeNSL, Kernel);                                   \
+  PY_REGISTER(CohesiveZoneModelNIFNSL, Kernel);                         \
+  PY_REGISTER(DynamicalSystem, Kernel);                                 \
   PY_REGISTER(NonSmoothDynamicalSystem, Kernel);                                \
   PY_REGISTER(LinearComplementaritySystemsNSDS, Kernel);                \
   PY_REGISTER(Topology, Kernel);                                                \
@@ -57,6 +58,7 @@
   PY_REGISTER(FrictionContact, Kernel);                                         \
   PY_REGISTER(GlobalFrictionContact, Kernel);                           \
   PY_REGISTER(RollingFrictionContact, Kernel);                          \
+  PY_REGISTER(CohesiveFrictionContact, Kernel);                         \
   PY_REGISTER(EulerMoreauOSI, Kernel);                                          \
   PY_REGISTER(MoreauJeanOSI, Kernel);                                           \
   PY_REGISTER(MoreauJeanBilbaoOSI, Kernel);                                     \

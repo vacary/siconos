@@ -167,6 +167,10 @@ struct ForMu : public Question<double>
   {
     answer = nsl . mu();
   }
+  void visit(const CohesiveZoneModelNIFNSL& nsl)
+  {
+    answer = nsl . mu();
+  }
   void visit(const NewtonImpactNSL& nsl)
   {
     answer = 0.;

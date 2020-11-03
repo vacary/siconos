@@ -72,7 +72,8 @@
   REGISTER_STRUCT(DynamicalSystemsGraph)               \
   REGISTER_STRUCT(InteractionsGraph)                   \
   REGISTER_STRUCT(DynamicalSystemsSubGraph)            \
-  REGISTER_STRUCT(InteractionsSubGraph)
+  REGISTER_STRUCT(InteractionsSubGraph)                \
+  REGISTER(CohesiveZoneModelNIFNSL)
 
 #ifndef SICONOS_VISITABLES
 #define SICONOS_VISITABLES()                    \

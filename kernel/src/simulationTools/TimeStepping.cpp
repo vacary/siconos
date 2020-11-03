@@ -627,6 +627,7 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep)
 
       updateInput();
       updateState();
+      updateNonSmoothLaw();
 
       if(!_isNewtonConverge && _newtonNbIterations < maxStep)
       {

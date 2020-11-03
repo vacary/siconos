@@ -32,6 +32,7 @@
 #include "MultipleImpactNSL.hpp"
 #include "NewtonImpactFrictionNSL.hpp"
 #include "NewtonImpactRollingFrictionNSL.hpp"
+#include "CohesiveZoneModelNIFNSL.hpp"
 #include "TypeName.hpp"
 
 #include "OneStepNSProblem.hpp"
@@ -169,7 +170,7 @@ void MoreauJeanOSI::initializeWorkVectorsForInteraction(Interaction &inter,
   assert(ds1);
   assert(ds2);
 
-  DEBUG_PRINTF("interaction number %i\n", inter.number());
+  DEBUG_PRINTF("interaction number %zu\n", inter.number());
 
   if(!interProp.workVectors)
   {
@@ -192,6 +193,13 @@ void MoreauJeanOSI::initializeWorkVectorsForInteraction(Interaction &inter,
   if(!inter_work[MoreauJeanOSI::OSNSP_RHS])
     inter_work[MoreauJeanOSI::OSNSP_RHS].reset(new SiconosVector(inter.dimension()));
 
+  SP::NonSmoothLaw nslaw = inter.nonSmoothLaw();
+  SP::CohesiveZoneModelNIFNSL nslaw_CohesiveZoneModelNIFNSL(std::dynamic_pointer_cast<CohesiveZoneModelNIFNSL>(nslaw));
+  if (nslaw_CohesiveZoneModelNIFNSL)
+  {
+    if(!inter_work[MoreauJeanOSI::OSNSP_RHS_COHESION])
+      inter_work[MoreauJeanOSI::OSNSP_RHS_COHESION].reset(new SiconosVector(inter.dimension()));
+  }
   // Check if interations levels (i.e. y and lambda sizes) are compliant with the current osi.
   _check_and_update_interaction_levels(inter);
   // Initialize/allocate memory buffers in interaction.
@@ -1258,9 +1266,10 @@ struct MoreauJeanOSI::_NSLEffectOnFreeOutput : public SiconosVisitor
   OneStepNSProblem * _osnsp;
   Interaction& _inter;
   InteractionProperties& _interProp;
-
-  _NSLEffectOnFreeOutput(OneStepNSProblem *p, Interaction& inter, InteractionProperties& interProp) :
-    _osnsp(p), _inter(inter), _interProp(interProp) {};
+  double _h;
+  
+  _NSLEffectOnFreeOutput(OneStepNSProblem *p, Interaction& inter, InteractionProperties& interProp, double h) :
+    _osnsp(p), _inter(inter), _interProp(interProp), _h(h) {};
 
   void visit(const NewtonImpactNSL& nslaw)
   {
@@ -1283,6 +1292,7 @@ struct MoreauJeanOSI::_NSLEffectOnFreeOutput : public SiconosVisitor
 
   void visit(const NewtonImpactFrictionNSL& nslaw)
   {
+    std::cout << "visit(const NewtonImpactFrictionNSL& nslaw)" << std::endl;
     SiconosVector & osnsp_rhs = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS];
 
     // The normal part is multiplied depends on en
@@ -1319,6 +1329,34 @@ struct MoreauJeanOSI::_NSLEffectOnFreeOutput : public SiconosVisitor
       }
     }
   }
+  void visit(const CohesiveZoneModelNIFNSL& nslaw)
+  {
+    SiconosVector & osnsp_rhs = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS];
+
+    // The normal part is multiplied depends on en
+    if(nslaw.en() > 0.0)
+    {
+      osnsp_rhs(0) +=  nslaw.en() * (*_inter.y_k(_osnsp->inputOutputLevel()))(0);
+    }
+    // The tangential part is multiplied depends on et
+    if(nslaw.et() > 0.0)
+    {
+      osnsp_rhs(1) +=  nslaw.et()  * (*_inter.y_k(_osnsp->inputOutputLevel()))(1);
+      if(_inter.nonSmoothLaw()->size()>=2)
+      {
+        osnsp_rhs(2) +=  nslaw.et()  * (*_inter.y_k(_osnsp->inputOutputLevel()))(2);
+      }
+    }
+    SiconosVector & osnsp_rhs_cohesion = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
+    // compute part of the r.h.s to the cohesive reaction force.
+    double * r_cohesion = nslaw.r_cohesion();
+    for (int k = 0; k <  nslaw.size(); k++)
+    {
+      DEBUG_PRINTF("r_cohesion [%i] = %e", k, r_cohesion[k]);
+      osnsp_rhs_cohesion(k) = _h * r_cohesion[k];
+    }
+  }
+
   void visit(const EqualityConditionNSL& nslaw)
   {
     ;
@@ -1484,8 +1522,9 @@ void MoreauJeanOSI::computeFreeOutput(InteractionsGraph::VDescriptor& vertex_int
 
   if(inter.relation()->getType() == Lagrangian || inter.relation()->getType() == NewtonEuler)
   {
+    double h = _simulation->timeStep();
     _NSLEffectOnFreeOutput nslEffectOnFreeOutput = _NSLEffectOnFreeOutput(osnsp, inter,
-        indexSet.properties(vertex_inter));
+                                                                          indexSet.properties(vertex_inter), h);
     inter.nonSmoothLaw()->accept(nslEffectOnFreeOutput);
   }
   DEBUG_EXPR(osnsp_rhs.display(););
@@ -1830,6 +1869,10 @@ void MoreauJeanOSI::updateState(const unsigned int)
 }
 
 
+
+
+
+
 bool MoreauJeanOSI::addInteractionInIndexSet(SP::Interaction inter, unsigned int i)
 {
   DEBUG_PRINT("addInteractionInIndexSet(SP::Interaction inter, unsigned int i)\n");
@@ -1847,11 +1890,16 @@ bool MoreauJeanOSI::addInteractionInIndexSet(SP::Interaction inter, unsigned int
   DEBUG_PRINTF("MoreauJeanOSI::addInteractionInIndexSet of level = %i yref=%e, yDot=%e, y_estimated=%e.,  _constraintActivationThreshold=%e\n", i,  y, yDot, y + gamma * h * yDot, _constraintActivationThreshold);
   y += gamma * h * yDot;
   assert(!std::isnan(y));
-  DEBUG_EXPR(
-    if(y <= 0)
-    DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet ACTIVATE.\n");
-  );
-  return (y <= _constraintActivationThreshold);
+
+  bool criteria = (y <= _constraintActivationThreshold);
+
+  criteria = criteria || inter->nonSmoothLaw()->isActiveAtLevel(*inter,i);
+  
+  DEBUG_EXPR_WE(
+    if(criteria)
+      DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet ACTIVATE.\n");
+    );
+  return criteria ;
 }
 
 
@@ -1860,7 +1908,18 @@ bool MoreauJeanOSI::removeInteractionFromIndexSet(SP::Interaction inter, unsigne
   return !(addInteractionInIndexSet(inter, i));
 }
 
+void MoreauJeanOSI::updateNonSmoothLaw()
+{
+  InteractionsGraph& indexSet0 = *simulation()->indexSet(0); /* we work all the nslaw for indexSet0 */
+  InteractionsGraph::VIterator ui, uiend;
+  for(std::tie(ui, uiend) = indexSet0.vertices(); ui != uiend; ++ui)
+  {
+    SP::Interaction inter = indexSet0.bundle(*ui);
+    // this is a simple update of the interaction based on the current value in the interaction
+    inter->nonSmoothLaw()->update(*inter);
+  }
 
+}
 
 void MoreauJeanOSI::display()
 {

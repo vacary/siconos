@@ -30,6 +30,7 @@ Include files related to modeling part of Siconos.
 #include "NewtonImpactFrictionNSL.hpp"
 #include "NormalConeNSL.hpp"
 #include "NewtonImpactRollingFrictionNSL.hpp"
+#include "CohesiveZoneModelNIFNSL.hpp"
 
 #include "Interaction.hpp"
 

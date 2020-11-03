@@ -24,6 +24,8 @@ from contextlib import contextmanager
 import siconos.io.mechanics_hdf5
 import siconos.numerics as sn
 import siconos.kernel as sk
+
+from siconos.mechanics import czm
 from siconos.kernel import \
     EqualityConditionNSL, \
     Interaction, DynamicalSystem, TimeStepping,\
@@ -876,7 +878,11 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
 
     def import_nonsmooth_law(self, name):
         if self._interman is not None:
-            nslawClass = getattr(sk, self._nslaws_data[name].attrs['type'])
+            nslaw_class_name = self._nslaws_data[name].attrs['type']
+            try:
+                nslawClass = getattr(sk, self._nslaws_data[name].attrs['type'])
+            except:
+                nslawClass = getattr(czm, self._nslaws_data[name].attrs['type'])
             if nslawClass == sk.NewtonImpactFrictionNSL:
                 nslaw = nslawClass(
                     float(self._nslaws_data[name].attrs['e']), 0.,
@@ -899,6 +905,14 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                 nslaw = nslawClass(int(self._nslaws_data[name].attrs['size']),
                                    float(self._nslaws_data[name].attrs['lb']),
                                    float(self._nslaws_data[name].attrs['ub']))
+            elif nslawClass == czm.BinaryCohesiveNSL:
+                nslaw = nslawClass(
+                        float(self._nslaws_data[name].attrs['e']), 0.,
+                        float(self._nslaws_data[name].attrs['mu']),
+                        float(self._nslaws_data[name].attrs['sigma_c']),
+                    float(self._nslaws_data[name].attrs['delta_c']),
+                    3)
+
             if not nslaw:
                 raise AssertionError("no nslaw")
             #assert(nslaw)
@@ -926,7 +940,7 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
             if not np.isscalar(mass) or mass <= 0:
                 self.print_verbose('Warning mass must be a positive scalar')
                 raise RuntimeError('Warning mass must be a positive scalar')
-            
+
             if body_class is None:
                 body_class = occ.OccBody
 
@@ -1468,7 +1482,7 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
 
         # self.print_verbose('mass = ', mass)
         # self.print_verbose('inertia = ', inertia)
-        
+
         input_ctrs = [ctr for _n_, ctr in obj.items()]
 
         contactors = []
@@ -2409,6 +2423,16 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                             osnspb = sk.RollingFrictionContact(dimension_contact)
                         else:
                             osnspb = sk.RollingFrictionContact(dimension_contact, solver_options)
+
+                    elif 'BinaryCohesiveNSL' in set(nslaw_type_list):
+                        if self._dimension ==3:
+                            dimension_contact=3
+                        elif self._dimension ==2:
+                            dimension_contact=2
+                        if (solver_options is None):
+                            osnspb = sk.CohesiveFrictionContact(dimension_contact)
+                        else:
+                            osnspb = sk.CohesiveFrictionContact(dimension_contact, solver_options)
                     else:
                         msg = "Unknown nslaw type"
                         msg += str(set(nslaw_type_list))

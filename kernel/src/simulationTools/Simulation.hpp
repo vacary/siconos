@@ -412,6 +412,10 @@ public:
    */
   virtual void updateState(unsigned int level=0);
 
+  /** update state of each non smooth law
+   */
+  virtual void updateNonSmoothLaw();
+
   /** update output
    *  \param level lambda order used to compute output
    * level is set to 0 by default since in all time-stepping schemes we update all the state
@@ -423,7 +427,7 @@ public:
    * level is set to 0 by default since in all time-stepping schemes we update all the state
    */
   void update(unsigned int level=0)
-    { updateInput(level); updateState(level); updateOutput(level); }
+  { updateInput(level); updateState(level); updateOutput(level); updateNonSmoothLaw(); }
 
   /** run the simulation, from t0 to T
    * with default parameters if any particular settings has been done

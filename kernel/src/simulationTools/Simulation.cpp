@@ -636,6 +636,19 @@ void Simulation::updateState(unsigned int)
   DEBUG_END("Simulation::updateState()\n");
 }
 
+void Simulation::updateNonSmoothLaw()
+{
+  DEBUG_BEGIN("Simulation::updateNonSmoothLaw()\n");
+  OSIIterator itOSI;
+  // 2 - compute state for each dynamical system
+  for(itOSI = _allOSI->begin(); itOSI != _allOSI->end() ; ++itOSI)
+    (*itOSI)->updateNonSmoothLaw();
+  /*Because the dof of DS have been updated,
+    the world (CAO for example) must be updated.*/
+  updateWorldFromDS();
+
+  DEBUG_END("Simulation::updateNonSmoothLaw()\n");
+}
 void Simulation::updateOutput(unsigned int)
 {
   DEBUG_BEGIN("Simulation::updateOutput()\n");
