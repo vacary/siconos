@@ -30,8 +30,6 @@ CohesiveZoneModelNIFNSL::CohesiveZoneModelNIFNSL(unsigned int size):
 CohesiveZoneModelNIFNSL::CohesiveZoneModelNIFNSL(double en, double et, double mu, unsigned int size):
   NewtonImpactFrictionNSL(en, et, mu, size)
 {
-  _r_cohesion = new double[size];
-  for (int k=0 ; k < size ; k++) _r_cohesion[k]=0.0;
 }
 
 CohesiveZoneModelNIFNSL::~CohesiveZoneModelNIFNSL()
@@ -42,6 +40,5 @@ void CohesiveZoneModelNIFNSL::display() const
 {
   NewtonImpactFrictionNSL::display();
   std::cout << "=== CohesiveZoneModelNIFNSL data display ===============================" << std::endl;
-  std::cout << " normal current cohesive reaction: " << _r_cohesion[0] <<std::endl;
   std::cout << "==================================================================" <<std::endl;
 }

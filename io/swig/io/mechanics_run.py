@@ -831,7 +831,7 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                 self._shape = ShapeCollection(io=self._shape_filename)
         return self
 
-    def log(self, fun, with_timer=False, before=True):
+    def log(self, fun, with_timer=False, before=False):
         if with_timer:
             t = Timer()
 
@@ -2404,6 +2404,15 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                         osnspb = sk.GenericMechanical()
                     else:
                         osnspb = sk.GenericMechanical(solver_options)
+                elif 'BinaryCohesiveNSL' in set(nslaw_type_list):
+                    if self._dimension ==3:
+                        dimension_contact=3
+                    elif self._dimension ==2:
+                        dimension_contact=2
+                    if (solver_options is None):
+                        osnspb = sk.CohesiveFrictionContact(dimension_contact)
+                    else:
+                        osnspb = sk.CohesiveFrictionContact(dimension_contact, solver_options)
                 else:
                     if ('NewtonImpactFrictionNSL' in set(nslaw_type_list)) or \
                        (len(set(nslaw_type_list)) == 0):
@@ -2423,16 +2432,6 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                             osnspb = sk.RollingFrictionContact(dimension_contact)
                         else:
                             osnspb = sk.RollingFrictionContact(dimension_contact, solver_options)
-
-                    elif 'BinaryCohesiveNSL' in set(nslaw_type_list):
-                        if self._dimension ==3:
-                            dimension_contact=3
-                        elif self._dimension ==2:
-                            dimension_contact=2
-                        if (solver_options is None):
-                            osnspb = sk.CohesiveFrictionContact(dimension_contact)
-                        else:
-                            osnspb = sk.CohesiveFrictionContact(dimension_contact, solver_options)
                     else:
                         msg = "Unknown nslaw type"
                         msg += str(set(nslaw_type_list))

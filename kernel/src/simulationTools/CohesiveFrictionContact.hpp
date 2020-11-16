@@ -40,13 +40,13 @@
 
 
   \rst
-  
+
   .. math::
 
      velocity =  q + M reaction \\
      \\
      velocity \geq 0, reaction \geq 0,  reaction^{T} velocity =0
-  
+
   \endrst
 
   and a Coulomb friction law.
@@ -95,7 +95,7 @@ public:
   CohesiveFrictionContact(int dimPb=3, int numericsSolverId = SICONOS_FRICTION_3D_NSGS);
 
   /**  constructor from a pre-defined solver options set.
-       \param options, the options set, 
+       \param options, the options set,
        \rst
        see :ref:`problems_and_solvers` for details.
        \endrst
@@ -105,7 +105,7 @@ public:
   /** destructor
    */
   virtual ~CohesiveFrictionContact(){};
-  
+
 
   // --- Others functions ---
   /** To compute a part of the "q+cohesion" vector of the OSNS that corresponds
@@ -123,8 +123,17 @@ public:
   /** build problem coefficients (if required)
       \param time the current time
       \return true if succeeded
+   */
+  bool preCompute(double time);
+
+
+  /** build problem coefficients (if required)
+      \param time the current time
+      \return true if succeeded
   */
   void postCompute();
+
+
 
   /** visitors hook
    */

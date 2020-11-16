@@ -41,8 +41,6 @@ private:
 
 
 protected:
-  /** current cohesive reaction*/
-  double * _r_cohesion;
 
   /** default constructor
    */
@@ -71,11 +69,8 @@ public:
   /** getter of r_cohesion
    * \return the value of r_cohesion
    */
-  inline double * r_cohesion() const
-  {
-    return _r_cohesion;
-  };
-
+  virtual double * r_cohesion(Interaction& inter) const =0;
+  
   // OTHER FUNCTIONS
 
   /** print the data to the screen

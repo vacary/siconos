@@ -94,18 +94,19 @@ public:
   {
     return _size;
   }
-  
+
+  /** initialize non smooth law if there is some internal variables
+  */
+  virtual SP::SiconosVector initializeInternalVariables(Interaction &) { return SP::SiconosVector ();}
+
   /** update non smooth law if there is some internal variables
   */
-  virtual void update(Interaction &) {}
-
-  virtual void swapInOldVariables() {}
+  virtual void updateInternalVariables(Interaction &) {}
 
   /** Ask if the Nslaw is active at a given level
   */
   virtual bool isActiveAtLevel(Interaction & inter, unsigned int level) { return true;}
 
-  
   /** display the data of the NonSmoothLaw on the standard output
   *
   */

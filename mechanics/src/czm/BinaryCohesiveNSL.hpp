@@ -125,13 +125,17 @@ public:
 
 
   // OTHER FUNCTIONS
-
-  void update(Interaction & inter);
-  void swapInOldVariables();
+  SP::SiconosVector initializeInternalVariables(Interaction &);
+  
+  void updateInternalVariables(Interaction & inter);
+  
   /** Ask if the Nslaw is active at a given level
   */
   virtual bool isActiveAtLevel(Interaction& inter,  unsigned int level);
 
+  double * r_cohesion(Interaction& inter) const;
+
+  
   /** print the data to the screen
    */
   void display() const;
