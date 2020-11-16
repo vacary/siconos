@@ -2374,7 +2374,7 @@ class VView(object):
             ntimes_proc = int(ntime / self.opts.nprocs)
             s = ''
             for i in range(self.opts.nprocs):
-                s += '{0}/{1} '.format(ntimes_proc*i, ntimes_proc*(i+1))
+                s += '{0}/{1} '.format(self.opts.start_step+ntimes_proc*i, self.opts.start_step+ntimes_proc*(i+1))
             print('#!/bin/sh')
             print('parallel --verbose', sys.argv[0], self.opts.io_filename,
                   options_str, '--start-step={//} --end-step={/} :::', s)
