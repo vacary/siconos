@@ -314,6 +314,13 @@ void Interaction::reset()
     _lambdaOld[i].reset(new SiconosVector(nslawSize));
     _lambdaOld[i]->zero();
   }
+  _internalVariables = _nslaw->initializeInternalVariables(*this);
+
+  if(_internalVariables)
+    _internalVariables_k.reset(new SiconosVector(*_internalVariables));
+
+
+  
 }
 
 
@@ -336,12 +343,15 @@ Interaction::Interaction(SP::NonSmoothLaw NSL, SP::Relation rel):
   setLevels.reset(new _setLevels(this));
   _nslaw->accept(*(setLevels.get()));
 
+  
   // Ensure consistency between interaction and nslaw sizes
   if(_interactionSize != _nslaw->size())
     THROW_EXCEPTION("Interaction constructor - Nonsmooth law and relation are not consistent (sizes differ).");
 
   // Check levels and resize attributes (y, lambda ...) if needed.
   reset();
+  display();
+  getchar();
 }
 
 
@@ -777,8 +787,6 @@ void Interaction::swapInOldVariables()
     *(_lambdaOld[i]) = *(_lambda[i]);
   }
 
-  nonSmoothLaw()->swapInOldVariables();
-  
 }
 
 void Interaction::swapInMemory()
@@ -798,6 +806,13 @@ void Interaction::swapInMemory()
   {
     _lambdaMemory[i].swap(*_lambda[i]);
   }
+  
+  if (_internalVariables)
+  {
+    assert(_internalVariables_k);
+    *(_internalVariables_k) = *(_internalVariables) ;
+  }
+  
   DEBUG_END("void Interaction::swapInMemory()\n");
 }
 
@@ -846,6 +861,13 @@ void Interaction::display(bool brief) const
     }
     else std::cout << "->nullptr" <<std::endl;
   }
+  std::cout << "| internalVariables : ";
+  if (_internalVariables)
+  {
+      _internalVariables->display();
+  }
+  else std::cout << "->nullptr" <<std::endl;
+  
   if(!brief)
   {
     for(unsigned int i = 0; i < _upperLevelForOutput + 1; i++)
@@ -865,6 +887,7 @@ void Interaction::display(bool brief) const
       _yMemory[i].display();
     }
   }
+  
 
   std::cout << "===================================" <<std::endl;
 }

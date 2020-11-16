@@ -25,9 +25,9 @@
 #include "OSNSMatrix.hpp"
 #include "NumericsMatrix.h"
 
-#define DEBUG_NOCOLOR
-#define DEBUG_STDOUT
-#define DEBUG_MESSAGES
+// #define DEBUG_NOCOLOR
+// #define DEBUG_STDOUT
+// #define DEBUG_MESSAGES
 #include "debug.h"
 
 using namespace RELATION;
@@ -95,18 +95,24 @@ void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescr
   OSI::TYPES osi2Type = osi2.getType();
 
   SP::Interaction inter = indexSet->bundle(vertex_inter);
-  unsigned int sizeY = inter->nonSmoothLaw()->size();
 
-  if((osi1Type == OSI::MOREAUJEANOSI  && osi2Type == OSI::MOREAUJEANOSI)||
-     (osi1Type == OSI::MOREAUDIRECTPROJECTIONOSI && osi2Type == OSI::MOREAUDIRECTPROJECTIONOSI))
+
+  SP::NonSmoothLaw nslaw = inter->nonSmoothLaw();
+  unsigned int sizeY = nslaw->size();
+  SP::CohesiveZoneModelNIFNSL nslaw_CohesiveZoneModelNIFNSL(std::dynamic_pointer_cast<CohesiveZoneModelNIFNSL>(nslaw));
+  if (nslaw_CohesiveZoneModelNIFNSL)
   {
-    //osi1.computeFreeOutput(vertex_inter, this); This has already been done
-    SiconosVector& osnsp_rhs_cohesion = *(*indexSet->properties(vertex_inter).workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
-    setBlock(osnsp_rhs_cohesion, _q_cohesion, sizeY, 0, pos);
+    if((osi1Type == OSI::MOREAUJEANOSI  && osi2Type == OSI::MOREAUJEANOSI)||
+       (osi1Type == OSI::MOREAUDIRECTPROJECTIONOSI && osi2Type == OSI::MOREAUDIRECTPROJECTIONOSI))
+    {
+      //osi1.computeFreeOutput(vertex_inter, this); This has already been done
+      SiconosVector& osnsp_rhs_cohesion = *(*indexSet->properties(vertex_inter).workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
+      setBlock(osnsp_rhs_cohesion, _q_cohesion, sizeY, 0, pos);
+    }
+    else
+      THROW_EXCEPTION("CohesiveFrictionContact::compute_q_cohesion_Block not yet implemented for OSI1 and OSI2 of type " + std::to_string(osi1Type)  + std::to_string(osi2Type));
   }
-  else
-    THROW_EXCEPTION("CohesiveFrictionContact::compute_q_cohesion_Block not yet implemented for OSI1 and OSI2 of type " + std::to_string(osi1Type)  + std::to_string(osi2Type));
-  DEBUG_EXPR(_q_cohesion->display());
+  //DEBUG_EXPR(_q_cohesion->display());
   DEBUG_END("CohesiveFrictionContact::compute_q_cohesion_Block (SP::Interaction inter, unsigned int pos)\n");
 }
 
@@ -114,7 +120,6 @@ void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescr
 
 void CohesiveFrictionContact::computeq(double time)
 {
-  
   LinearOSNS::computeq(time);
 
   // === Get index set from Simulation ===
@@ -141,15 +146,55 @@ void CohesiveFrictionContact::computeq(double time)
 
 
   DEBUG_EXPR(_q_cohesion->display(););
-
+  DEBUG_EXPR("before"; _q->display(););
   NM_gemv(1.0,
           NM,
           &*_q_cohesion->getArray(),
           1.0,
           &*_q->getArray());
 
+  DEBUG_EXPR(
+    SP::SiconosVector q_add(new SiconosVector(*_q_cohesion));
+    q_add->zero();
+    NM_gemv(1.0,
+            NM,
+            &*_q_cohesion->getArray(),
+            1.0,
+            &*q_add->getArray());
+    q_add->display();
+    );
   DEBUG_EXPR(_q->display());
 }
+
+bool CohesiveFrictionContact::preCompute(double time)
+{
+  LinearOSNS::preCompute(time);
+  InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
+  if(_keepLambdaAndYState)
+  {
+    InteractionsGraph::VIterator ui, uiend;
+    for(std::tie(ui, uiend) = indexSet.vertices(); ui != uiend; ++ui)
+    {
+      Interaction& inter = *indexSet.bundle(*ui);
+      SP::NonSmoothLaw nslaw = inter.nonSmoothLaw();
+      SP::CohesiveZoneModelNIFNSL nslaw_CohesiveZoneModelNIFNSL(std::dynamic_pointer_cast<CohesiveZoneModelNIFNSL>(nslaw));
+      if (nslaw_CohesiveZoneModelNIFNSL)
+      {
+        // Get the position of inter-interactionBlock in the vector w
+        // or z
+        unsigned int pos = indexSet.properties(*ui).absolute_position;
+        SiconosVector& osnsp_rhs_cohesion = *(*indexSet.properties(*ui).workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
+        
+        for (int k =0; k < osnsp_rhs_cohesion.size(); k++)
+        {
+          (*_z)(pos+k) -= osnsp_rhs_cohesion(k);
+        }
+      }
+    }
+  }
+  return true;
+}
+
 void CohesiveFrictionContact::postCompute()
 {
   DEBUG_BEGIN("void CohesiveFrictionContact::postCompute()\n");
@@ -161,8 +206,7 @@ void CohesiveFrictionContact::postCompute()
 
   *_z = *_z + *_q_cohesion;
 
-
-
+  DEBUG_EXPR(_w->display(););
   // === Get index set from Topology ===
   InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
 

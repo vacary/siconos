@@ -2182,7 +2182,8 @@ void SiconosBulletCollisionManager::updateInteractions(SP::Simulation simulation
   DEBUG_EXPR(
     int num_contact_points =0;
     for(it=t.begin(); it!=itend; ++it)  num_contact_points++;
-    std::cout << "Number of contacts points detected by bullet: " << num_contact_points << std::endl; );
+    std::cout << "Number of contacts points detected by bullet: " << num_contact_points << std::endl;
+    );
 
   DEBUG_PRINT("SiconosBulletCollisionManager :: iterating contact points:\n");
   //getchar();

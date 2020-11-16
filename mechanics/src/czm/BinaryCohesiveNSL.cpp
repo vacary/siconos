@@ -20,9 +20,9 @@
 
 #include <iostream>
 
-#define DEBUG_NOCOLOR
-#define DEBUG_STDOUT
-#define DEBUG_MESSAGES
+// #define DEBUG_NOCOLOR
+// #define DEBUG_STDOUT
+// #define DEBUG_MESSAGES
 //#define DEBUG_BEGIN_END_ONLY
 //#define DEBUG_WHERE_MESSAGES
 #include <debug.h>
@@ -49,13 +49,22 @@ BinaryCohesiveNSL::BinaryCohesiveNSL(double en, double et, double mu,
 BinaryCohesiveNSL::~BinaryCohesiveNSL()
 {}
 
-void BinaryCohesiveNSL::update(Interaction& inter) 
+SP::SiconosVector BinaryCohesiveNSL::initializeInternalVariables(Interaction& inter)
 {
-  DEBUG_BEGIN("void BinaryCohesiveNSL::update(Interaction& inter)\n");
+  /* internalVariables(0) --> beta */
+  /* internalVariables(1:nslawsize) --> r_cohesion */
+  SP::SiconosVector internalVariables(new SiconosVector(1+_size));
+  
+  return internalVariables;
+  
+}
+void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter) 
+{
+  DEBUG_BEGIN("void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)\n");
   /*  update beta */
   
   double normal_gap = (*(inter.y(0)))(0); // this rule has to be improved following the model of Tveergard.
-  std::cout << this << std::endl;
+  // std::cout << this << std::endl;
   DEBUG_PRINTF("beta_k = %e\n", _beta_k);
   DEBUG_PRINTF("normal_gap = %e\n", normal_gap);
   
@@ -72,17 +81,17 @@ void BinaryCohesiveNSL::update(Interaction& inter)
   
   DEBUG_PRINTF("beta = %e\n", _beta);
 
-  
+  double * r_cohesion = &(inter.internalVariables()->getArray()[1]);
   /* compute _r_cohesion */
   for (int k =1; k < _size; k++)
   {
-    _r_cohesion[k]= 0.0;
+    r_cohesion[k]= 0.0;
   }
-  _r_cohesion[0]= - _beta* _sigma_c * _surface;
+  r_cohesion[0]= - _beta* _sigma_c * _surface;
 
   assert(_beta <= _beta_k);
   
-  DEBUG_END("void BinaryCohesiveNSL::update(Interaction& inter)\n");
+  DEBUG_END("void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)\n");
 }
 bool BinaryCohesiveNSL::isActiveAtLevel(Interaction& inter, unsigned int level)
 {
@@ -103,17 +112,11 @@ bool BinaryCohesiveNSL::isActiveAtLevel(Interaction& inter, unsigned int level)
  
 }
 
-void BinaryCohesiveNSL::swapInOldVariables() 
+double * BinaryCohesiveNSL::r_cohesion(Interaction& inter) const
 {
-  DEBUG_BEGIN("void BinaryCohesiveNSL::swapInOldVariables()\n");
-  _beta_k = _beta;
-  
-  std::cout << this << std::endl;
-  std::cout << " cohesion state: " << _beta <<std::endl;
-  std::cout << " old cohesion state: " << _beta_k <<std::endl;
-  DEBUG_EXPR(display(););
-  DEBUG_END("void BinaryCohesiveNSL::swapInOldVariables()\n");
-}
+  double * r_cohesion = &(inter.internalVariables()->getArray()[1]);
+  return r_cohesion;
+};
 
 
 void BinaryCohesiveNSL::display() const

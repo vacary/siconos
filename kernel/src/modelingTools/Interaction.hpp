@@ -118,8 +118,6 @@ private:
   /** memory of previous coordinates of the system */
   VectorOfMemories _yMemory;
 
-  /** memory of previous coordinates of the system */
-  VectorOfMemories _lambdaMemory;
 
   /** result of the computeInput function */
   VectorOfVectors _lambda;
@@ -130,10 +128,20 @@ private:
    */
   VectorOfVectors _lambdaOld;
 
+  /** memory of previous coordinates of the system */
+  VectorOfMemories _lambdaMemory;
+
+
+  /* vector of internal variables*/
+  SP::SiconosVector _internalVariables;
+
+  /* vector of internal variables at the previous time step*/
+  SP::SiconosVector _internalVariables_k;
+  
   /** the Non-smooth Law of the interaction*/
   SP::NonSmoothLaw _nslaw;
 
-  /** the type of Relation of the interaction */
+  /** the Relation of the interaction */
   SP::Relation _relation;
 
   /** pointer links to DS variables needed for computation,
@@ -603,6 +611,18 @@ public:
    */
   void setLambdaOldPtr(const unsigned int i, SP::SiconosVector newPtr);
 
+  SP::SiconosVector internalVariables()
+  {
+    return _internalVariables;
+  };
+  
+  SP::SiconosVector internalVariables_k()
+  {
+    return _internalVariables_k;
+  };
+
+
+  
   /** get the Relation of this Interaction
    *  \return a pointer on this Relation
    */

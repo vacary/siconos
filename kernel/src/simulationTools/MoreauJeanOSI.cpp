@@ -1292,7 +1292,6 @@ struct MoreauJeanOSI::_NSLEffectOnFreeOutput : public SiconosVisitor
 
   void visit(const NewtonImpactFrictionNSL& nslaw)
   {
-    std::cout << "visit(const NewtonImpactFrictionNSL& nslaw)" << std::endl;
     SiconosVector & osnsp_rhs = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS];
 
     // The normal part is multiplied depends on en
@@ -1349,7 +1348,7 @@ struct MoreauJeanOSI::_NSLEffectOnFreeOutput : public SiconosVisitor
     }
     SiconosVector & osnsp_rhs_cohesion = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
     // compute part of the r.h.s to the cohesive reaction force.
-    double * r_cohesion = nslaw.r_cohesion();
+    double * r_cohesion = nslaw.r_cohesion(_inter);
     for (int k = 0; k <  nslaw.size(); k++)
     {
       DEBUG_PRINTF("r_cohesion [%i] = %e", k, r_cohesion[k]);
@@ -1916,7 +1915,7 @@ void MoreauJeanOSI::updateNonSmoothLaw()
   {
     SP::Interaction inter = indexSet0.bundle(*ui);
     // this is a simple update of the interaction based on the current value in the interaction
-    inter->nonSmoothLaw()->update(*inter);
+    inter->nonSmoothLaw()->updateInternalVariables(*inter);
   }
 
 }
