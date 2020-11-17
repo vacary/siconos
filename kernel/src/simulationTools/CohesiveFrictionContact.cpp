@@ -25,9 +25,9 @@
 #include "OSNSMatrix.hpp"
 #include "NumericsMatrix.h"
 
-// #define DEBUG_NOCOLOR
-// #define DEBUG_STDOUT
-// #define DEBUG_MESSAGES
+#define DEBUG_NOCOLOR
+#define DEBUG_STDOUT
+#define DEBUG_MESSAGES
 #include "debug.h"
 
 using namespace RELATION;
@@ -207,6 +207,7 @@ void CohesiveFrictionContact::postCompute()
   *_z = *_z + *_q_cohesion;
 
   DEBUG_EXPR(_w->display(););
+  DEBUG_EXPR(_z->display(););
   // === Get index set from Topology ===
   InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
 
