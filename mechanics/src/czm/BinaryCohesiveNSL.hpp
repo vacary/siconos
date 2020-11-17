@@ -52,12 +52,12 @@ private:
 protected:
   
   /** cohesion state */
-  double _beta; // =0:broken =1:sane
+  //double _beta; // =0:broken =1:sane
 
   /** old value of cohesion state
       this should be stored on the graph by the OSI
   */
-  double _beta_k; // =0:broken =1:sane
+  //double _beta_k; // =0:broken =1:sane
 
   /** default constructor
    */
@@ -114,14 +114,6 @@ public:
   {
     _delta_c = newVal;
   };
-  
-  /** getter of beta
-   * \return the value of beta
-   */
-  inline double beta() const
-  {
-    return _beta;
-  };
 
 
   // OTHER FUNCTIONS
@@ -135,7 +127,11 @@ public:
 
   double * r_cohesion(Interaction& inter) const;
 
-  
+  /** getter of beta
+   * \return the value of beta
+   */
+  double beta(Interaction& inter) const;
+ 
   /** print the data to the screen
    */
   void display() const;

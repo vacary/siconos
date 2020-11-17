@@ -350,8 +350,6 @@ Interaction::Interaction(SP::NonSmoothLaw NSL, SP::Relation rel):
 
   // Check levels and resize attributes (y, lambda ...) if needed.
   reset();
-  display();
-  getchar();
 }
 
 
