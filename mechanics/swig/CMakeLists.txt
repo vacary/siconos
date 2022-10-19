@@ -5,6 +5,7 @@
 # List of modules to be built in the python bindings
 set(${COMPONENT}_PYTHON_MODULES
   "mechanics/joints.i"
+  "mechanics/czm.i"
   "mechanics/collision/base.i"
   "mechanics/collision/native.i"
   "mechanics/collision/bodies.i")
