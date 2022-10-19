@@ -628,6 +628,7 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep)
 
     updateInput();
     updateState();
+    updateNonSmoothLaw();
     if (!_skip_last_updateOutput)
       updateOutput();
     hasNSProblems = (!_allNSProblems->empty()) ? true : false;
