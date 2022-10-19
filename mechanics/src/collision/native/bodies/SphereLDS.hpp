@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,7 @@
 class SphereLDS : public LagrangianDS, public std::enable_shared_from_this<SphereLDS>
 {
 protected:
-  /** serialization hooks
-  */
+
   ACCEPT_SERIALIZATION(SphereLDS);
 
   double radius;
@@ -84,9 +83,6 @@ public:
   void computeJacobianFGyrq(SP::SiconosVector, SP::SiconosVector);
   void computeJacobianFGyrqDot(SP::SiconosVector, SP::SiconosVector);
 
-
-  /** visitors hook
-   */
   ACCEPT_BASE_VISITORS(LagrangianDS);
 
 };

@@ -1,20 +1,35 @@
+# Siconos is a program dedicated to modeling, simulation and control
+# of non smooth dynamical systems.
+#
+# Copyright 2022 INRIA.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 #===============================================================================
 # cmake utility to compile and install siconos.
-#
-#
-# Siconos development team - September 2015.
-#
 #===============================================================================
 
 # ============= Global 'standard' cmake Settings =============
 
 # Set minimum version for cmake
-# We advise 3.12 at least, but 3.7 is authorized since it's the default version on current debian stable.
-cmake_minimum_required(VERSION 3.7)
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12")
-  cmake_policy(SET CMP0074 NEW)
-endif()
+# We advise the most recent version of cmake.
+# Use python3 -m pip install cmake to get it.
+cmake_minimum_required(VERSION 3.14) 
 
+cmake_policy(SET CMP0074 NEW) # find_package() uses <PackageName>_ROOT variables.
+#cmake_policy(SET CMP0078 NEW) # UseSWIG generates standard target names.
+cmake_policy(SET CMP0086 NEW) # UseSWIG honors SWIG_MODULE_NAME via -module flag.
+cmake_policy(SET CMP0079 NEW) # target_link_libraries() allows use with targets in other directories
 
 # Set cmake modules directories
 # (i.e. the those which contain all user-defined FindXXX.cmake files among other things)
@@ -105,7 +120,7 @@ list(GET COMPONENTS -1 last_component)
 
 if(WITH_CXX)
   project(${PROJECT_NAME} CXX C) # C or not C ?
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 17)
 else()
   # we may need to compile only numerics and only in C.
   # Really???
@@ -126,11 +141,6 @@ endif()
 # Common setup
 include(SiconosSetup)
 
-# ========= Python bindings =========
-if(WITH_PYTHON_WRAPPER)
-  add_subdirectory(wrap)
-endif()
-
 # ========= Tests setup =========
 if(WITH_TESTING)
   include(CTest)
@@ -146,11 +156,20 @@ endif()
 # enabled options.
 add_subdirectory(docs)
 
+if(WITH_FCLIB)
+  include(fclib_setup)
+endif()
+
 # ========= Setup each required component =========
 foreach(COMPONENT IN LISTS COMPONENTS)
   message("\n--------------------------------------------------")
   add_subdirectory(${COMPONENT})
 endforeach()
+
+# ========= Python bindings =========
+if(WITH_PYTHON_WRAPPER)
+  add_subdirectory(wrap)
+endif()
 
 # ========= Documentation setup =========
 # Finalize documentation setups.
@@ -201,6 +220,9 @@ message("    Blas headers : ${BLAS_HEADER} in ${BLAS_INCLUDE_DIR}.")
 message(STATUS "Lapack config:")
 message("    Lapack libraries : ${LAPACK_LIBRARIES}.")
 message("    Lapack headers : ${LAPACK_HEADER} in ${LAPACK_INCLUDE_DIR}.")
+if(WITH_FCLIB)
+  message(STATUS "Use fclib installed in ${fclib_ROOT}.")
+endif()
 if(WITH_SYSTEM_SUITESPARSE)
   message(STATUS "Use system-provided SuiteSparse library, with:")
   message("    - CXSparse headers path: ${SuiteSparse_CXSparse_INCLUDE_DIR}")
@@ -216,10 +238,19 @@ message(STATUS "Python interpreter is ${Python3_EXECUTABLE}")
 if(WITH_PYTHON_WRAPPER)
   message(STATUS "Python libraries are ${Python3_LIBRARIES}")
 endif()
-message(STATUS "The project will be installed in ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "------------ Installation information ------------\n")
+message("    Please check them with care and be sure to have the proper rights to write in those directories ...\n")
+message("    - The project will be installed in ${CMAKE_INSTALL_PREFIX}")
 if(WITH_PYTHON_WRAPPER)
-  message(STATUS "${SICONOS_PYTHON_PACKAGE} python package will be installed in ${SICONOS_PYTHON_INSTALL_DIR}")
+  message("    - Siconos python packages will be installed in ${SICONOS_PYTHON_INSTALL_DIR} (${sicopy_install_mode} mode),")
+  message("    with the command ${PYTHON_EXECUTABLE} -m pip install -U ${PIP_INSTALL_OPTIONS} ...\n")
+  if(NOT sicopy_install_mode STREQUAL "standard")
+    message("    If this path is not in the standard python environment, you'll probably have to fill PYTHONPATH.\n")
+    message("    To check python known paths, run: python3 -c 'import sys; print(sys.path)' \n")
+    message("    If siconos package path is not in sys.path, to add it, execute: export PYTHONPATH=${SICONOS_PYTHON_INSTALL_DIR}")
+  endif()
 endif()
+message(STATUS "------------------------------------- ------------\n")
 message(STATUS "To get more information about dependencies, config or else, ")
 message(STATUS "check CMakeCache.txt file or re-run cmake with -DPRINT_ENV=ON.")
 message(STATUS "=================================================================================================\n")

@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 */
 
 /*! \file SphereNEDS.hpp
-
+  
   \brief Definition of a 3D Sphere as a NewtonEulerDS (with
   quaternions).
 
@@ -32,8 +32,6 @@
 class SphereNEDS : public NewtonEulerDS, public std::enable_shared_from_this<SphereNEDS>
 {
 protected:
-  /** serialization hooks
-  */
   ACCEPT_SERIALIZATION(SphereNEDS);
 
   double radius;
@@ -63,8 +61,6 @@ public:
     return radius;
   };
 
-  /** visitors hook
-   */
   ACCEPT_BASE_VISITORS(NewtonEulerDS);
 
 };

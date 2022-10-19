@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,9 @@ TestCase * build_test_collection(int n_data, const char ** data_collection, int*
     current++;
 #ifndef WITH_MUMPS
     if(d>=4 && d<9) // Capsules tests work only with mumps
+      collection[current - 1].will_fail = 1;
+#else
+    if(d==4) // first  Capsules test is also unstable with mumps
       collection[current - 1].will_fail = 1;
 #endif
   }

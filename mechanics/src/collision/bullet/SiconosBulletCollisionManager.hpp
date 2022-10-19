@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,7 @@ enum SiconosBulletDimension
 struct SiconosBulletOptions
 {
 protected:
-  /** serialization hooks
-   */
+
   ACCEPT_SERIALIZATION(SiconosBulletOptions);
 
 public:
@@ -62,13 +61,13 @@ public:
   unsigned int minimumPointsPerturbationThreshold;
   bool enableSatConvex;
   bool enablePolyhedralContactClipping;
+  double Depth2D;
 };
 
 struct SiconosBulletStatistics
 {
 protected:
-  /** serialization hooks
-   */
+
   ACCEPT_SERIALIZATION(SiconosBulletStatistics);
 
 public:
@@ -76,17 +75,18 @@ public:
     : new_interactions_created(0)
     , existing_interactions_processed(0)
     , interaction_warnings(0)
+    , interaction_destroyed(0)
     {}
   int new_interactions_created;
   int existing_interactions_processed;
   int interaction_warnings;
+  int interaction_destroyed;
 };
 
 class SiconosBulletCollisionManager : public SiconosCollisionManager
 {
 protected:
-  /** serialization hooks
-   */
+
   ACCEPT_SERIALIZATION(SiconosBulletCollisionManager);
 
 protected:
@@ -96,6 +96,10 @@ protected:
 
   // callback for contact point removal, and a global for context
   static bool bulletContactClear(void* userPersistentData);
+
+  // callback to modify the contact point when it has just been added in the manifold.
+  static bool bulletContactAddedCallback(btManifoldPoint& cp, const btCollisionObjectWrapper* colObj0Wrap, int partId0, int index0,
+                                         const btCollisionObjectWrapper* colObj1Wrap, int partId1, int index1);
   static Simulation *gSimulation;
 
 public:
@@ -109,35 +113,44 @@ protected:
   SiconosBulletStatistics _stats;
 
   /** Provided so that creation of collision points can be overridden.
-   * See modify_normals.py in examples/Mechanics/Hacks */
+   *  See modify_normals.py in examples/Mechanics/Hacks */
   virtual SP::BulletR makeBulletR(SP::RigidBodyDS ds1, SP::SiconosShape shape1,
                                   SP::RigidBodyDS ds2, SP::SiconosShape shape2,
                                   const btManifoldPoint &);
-  
+
   /** Provided so that creation of collision points can be overridden.
-   * See modify_normals.py in examples/Mechanics/Hacks */
+   *  See modify_normals.py in examples/Mechanics/Hacks */
   virtual SP::Bullet5DR makeBullet5DR(SP::RigidBodyDS ds1, SP::SiconosShape shape1,
                                       SP::RigidBodyDS ds2, SP::SiconosShape shape2,
                                       const btManifoldPoint &);
 
   /** Provided so that creation of collision points can be overridden.
-   * See modify_normals.py in examples/Mechanics/Hacks */
+   *  See modify_normals.py in examples/Mechanics/Hacks */
   virtual SP::Bullet2dR makeBullet2dR(SP::RigidBody2dDS ds1, SP::SiconosShape shape1,
                                       SP::RigidBody2dDS ds2, SP::SiconosShape shape2,
                                       const btManifoldPoint &);
 
   /** Provided so that creation of collision points can be overridden.
-   * See modify_normals.py in examples/Mechanics/Hacks */
+   *  See modify_normals.py in examples/Mechanics/Hacks */
   virtual SP::Bullet2d3DR makeBullet2d3DR(SP::RigidBody2dDS ds1, SP::SiconosShape shape1,
                                           SP::RigidBody2dDS ds2, SP::SiconosShape shape2,
                                           const btManifoldPoint &);
 
 public:
-  StaticContactorSetID insertStaticContactorSet(
-    SP::SiconosContactorSet cs, SP::SiconosVector position = SP::SiconosVector());
 
-  bool removeStaticContactorSet(StaticContactorSetID id);
+  /** Add a static body in the collision detector.
+   */
+  SP::StaticBody addStaticBody(
+    SP::SiconosContactorSet cs, SP::SiconosVector position = SP::SiconosVector(), int number=0);
 
+  /** Remove a body from the collision detector.
+   */
+  void removeStaticBody(const SP::StaticBody& body);
+
+  /** Remove a body from the collision detector. This must be done
+   *  after removing a body from the NonSmoothDynamicalSystem
+   *  otherwise contact will occur with a non-graph body which results
+   *  in failure. */
   void removeBody(const SP::SecondOrderDS& body);
 
   void updateInteractions(SP::Simulation simulation);
@@ -152,12 +165,14 @@ public:
   const SiconosBulletStatistics &statistics() const { return _stats; }
   void resetStatistics() { _stats = SiconosBulletStatistics(); }
 
-  /** Set the usage of equality constraints. When the number
-      of objects is huge as in granular material, the usage
-      of equality constraint breaks scalability.
-      This have to be fixed.
-   * \param choice a boolean, default is True.
-   */
+  /**
+     Set the usage of equality constraints. When the number
+     of objects is huge as in granular material, the usage
+     of equality constraint breaks scalability.
+     This have to be fixed.
+     
+     \param choice a boolean, default is True.
+  */
   void useEqualityConstraints(bool choice=true)
   { _with_equality_constraints = choice; };
 };

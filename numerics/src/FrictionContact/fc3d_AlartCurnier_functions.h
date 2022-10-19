@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 /*!\file fc3d_AlartCurnier_functions.h
 
-  \brief Typedef and functions declarations related to Alart-Curnier
+  Typedef and functions declarations related to Alart-Curnier
   formulation for 3 dimension frictional contact problems.
 
   Subroutines used when the friction-contact 3D problem is written

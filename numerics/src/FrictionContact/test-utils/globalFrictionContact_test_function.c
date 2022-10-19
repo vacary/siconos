@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,10 @@ int globalFrictionContact_test_function(TestCase* current)
 
   if(dim == 2)
   {
-    info = 1;
+
+    info = gfc2d_driver(problem,
+                        reaction, velocity, globalvelocity,
+                        current->options);
   }
   else if(dim == 3)
   {
@@ -78,11 +81,6 @@ int globalFrictionContact_test_function(TestCase* current)
     {
       printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k, reaction[k]);
     }
-    printf(" ..... \n");
-    for(k = 0 ; k < print_size; k++)
-    {
-      printf("GlocalVelocity[%i] = %12.8e\n", k, globalvelocity[k]);
-    }
   }
   else
   {
@@ -90,12 +88,24 @@ int globalFrictionContact_test_function(TestCase* current)
     {
       printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k, reaction[k]);
     }
-    printf("\n");
-    for(k = 0 ; k < dim*NC; k++)
+  }
+  printf(" ..... \n");
+  if(n >= print_size)
+  {
+    printf("First values (%i)\n", print_size);
+    for(k = 0 ; k < print_size; k++)
     {
       printf("GlocalVelocity[%i] = %12.8e\n", k, globalvelocity[k]);
     }
   }
+  else
+  {
+    for(k = 0 ; k < n; k++)
+    {
+      printf("GlocalVelocity[%i] = %12.8e\n", k, globalvelocity[k]);
+    }
+  }
+
   printf("\n");
 
   for(k = 0; k < dim * NC; ++k)

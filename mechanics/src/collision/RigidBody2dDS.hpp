@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,19 +25,17 @@
 #define RigidBody2dDS_h
 
 #include <MechanicsFwd.hpp>
-#include <LagrangianDS.hpp>
+#include <LagrangianLinearTIDS.hpp>
 #include <SiconosVisitor.hpp>
 #include <SiconosContactor.hpp>
 
-class RigidBody2dDS : public LagrangianDS,
+class RigidBody2dDS : public LagrangianLinearTIDS,
                       public std::enable_shared_from_this<RigidBody2dDS>
 {
 protected:
-  /** serialization hooks
-  */
   ACCEPT_SERIALIZATION(RigidBody2dDS);
 
-  RigidBody2dDS() : LagrangianDS() {};
+  RigidBody2dDS() : LagrangianLinearTIDS() {};
 
   /** a scalar mass in the case of RigidBody2dDS */
   double _scalarMass;
@@ -78,21 +76,21 @@ public:
   /** Set the value of the _allowSelfCollide flag. */
   void setAllowSelfCollide(bool x) { _allowSelfCollide = x; }
 
-  /** Access the contactor set associated with this body.
-   * \return A SP::SiconosContactorSet */
+  /** \return the contactor set associated with this body */
   SP::SiconosContactorSet contactors() const { return _contactors; }
 
   /** Provide a set of contactors to the body.
-   * \param c A SP::SiconosContactorSet */
+   *
+   *  \param c A SP::SiconosContactorSet */
   void setContactors(SP::SiconosContactorSet c) { _contactors = c; }
 
   /** Make the base position of the contactors equal to the DS q vector.
-   * \return a SP::SiconosVector */
+   *
+   *  \return a SP::SiconosVector */
   virtual SP::SiconosVector base_position() { return q(); }
 
-  /** visitors hook
-   */
-  ACCEPT_BASE_VISITORS(LagrangianDS);
+  ACCEPT_BASE_VISITORS(LagrangianLinearTIDS);
+  
 };
 
 #endif /* RigidBody2dDS_h */

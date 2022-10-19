@@ -54,7 +54,8 @@ extensions = [
     'sphinxcontrib.bibtex',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.githubpages',
-    'sphinxcontrib.youtube',
+    'ytsphinx.youtube',
+    #'sphinxcontrib.youtube',
 ]
 
 with_python_wrapper = '@WITH_PYTHON_WRAPPER@' == 'ON'
@@ -67,19 +68,22 @@ if with_python_wrapper:
         #'numpydoc.numpydoc',
         # napoleon will preprocess docstrings to convert them to
         # rst in numpydoc style
-        'sphinx.ext.napoleon', ]
+        'sphinx.ext.napoleon',
+        ]
     #numpydoc_class_members_toctree = True
 
     # ---- Autodoc config ----
-    # Use class docstring for documentation, not __init__ (which is the same
-    # due to doxy2swig way of doing things).
-    autoclass_content = 'class'
-
     autodoc_default_options = {
-        'members': None,
-        'show-inheritance': None, }
+        #'members': None,
+        #'show-inheritance': None,
+        'member-order': 'bysource',
+        'private-members': None
+        }
     autodoc_docstring_signature = True
-
+    autodoc_typehints = 'none'
+    automodule_skip_lines = 'True'
+    autoclass_content = 'both'
+    
     # ---- Napoleon config ----
 
     # Customize napoleon/sphinx output.
@@ -132,6 +136,11 @@ breathe_default_members = ('members', 'public-members')
 # https://github.com/CityOfZion/neon-js/issues/111)
 # scv_root_ref = 'feature_branch'
 
+
+
+# Bibtex config.
+# https://sphinxcontrib-bibtex.readthedocs.io/en/latest/usage.html
+bibtex_bibfiles = ['siconos.bib']
 # Tell sphinx what the primary language being documented is.
 primary_domain = 'cpp'
 
@@ -245,8 +254,8 @@ html_theme_options = {
 
     # HTML navbar class (Default: "navbar") to attach to <div> element.
     # For black navbar, do "navbar navbar-inverse"
-    'navbar_class': "navbar",  # navbar-inverse",
-
+    'navbar_class': "navbar",
+    
     # Fix navigation bar to top of page?
     # Values: "true" (default) or "false"
     'navbar_fixed_top': "false",
@@ -274,7 +283,7 @@ html_theme_options = {
     'bootstrap_version': "3",
 
 
-    'nosidebar': True,
+    #'nosidebar': True,
 }
 
 html_context = {
@@ -468,9 +477,22 @@ def source_read(app, docname, source):
         source[0] = re.sub(':eval:`(.*)`.*', r, source[0])
 
 
+
+from sphinx.ext.autodoc import cut_lines
+
+def skip(app, what, name, obj, would_skip, options):
+    if name.startswith('_'):
+        return True
+    if name == 'thisown':
+        return True
+    return would_skip
+
+
 def setup(app):
     app.connect('source-read', source_read)
-    app.add_stylesheet("biblio.css")
+    app.add_css_file("biblio.css")
+    app.connect("autodoc-skip-member", skip)
+    #    app.connect('autodoc-process-docstring', postprocess_docstrings)
 
 #if with_python_wrapper:
 #    autodoc_member_order = 'bysource'

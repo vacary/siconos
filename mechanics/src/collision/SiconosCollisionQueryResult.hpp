@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,14 @@ contactors maintained by a SiconosCollisionManager.
 
 #include <MechanicsFwd.hpp>
 
-/** \brief Holds one result of a line segment intersection query
-    against the graph of body contactors maintained by a
-    SiconosCollisionManager. */
+/**
+   Holds one result of a line segment intersection query
+   against the graph of body contactors maintained by a
+   SiconosCollisionManager
+*/
 class SiconosCollisionQueryResult
 {
 protected:
-  /** serialization hooks
-   */
   ACCEPT_SERIALIZATION(SiconosCollisionQueryResult);
 
 public:
@@ -42,7 +42,7 @@ public:
   double distance;
 
   /** Body owning the contactor that was intersected, may be null for
-   * static contactors. */
+   *  static contactors. */
   SP::SecondOrderDS body;
 
   /** The shape that was intersected. */

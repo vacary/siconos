@@ -56,8 +56,9 @@
   PY_REGISTER(MLCPProjectOnConstraints, Kernel);                                \
   PY_REGISTER(GenericMechanical, Kernel);                                       \
   PY_REGISTER(FrictionContact, Kernel);                                         \
-  PY_REGISTER(GlobalFrictionContact, Kernel);                           \
+  PY_REGISTER(GlobalFrictionContact, Kernel);                                   \
   PY_REGISTER(RollingFrictionContact, Kernel);                          \
+  PY_REGISTER(GlobalRollingFrictionContact, Kernel);                           \
   PY_REGISTER(CohesiveFrictionContact, Kernel);                         \
   PY_REGISTER(EulerMoreauOSI, Kernel);                                          \
   PY_REGISTER(MoreauJeanOSI, Kernel);                                           \

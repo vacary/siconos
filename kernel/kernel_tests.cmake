@@ -1,6 +1,6 @@
 include(tools4tests)
 
-if(WITH_${COMPONENT}_TESTING)
+if(WITH_TESTING)
 
   # ---- Siconos Algebra tests ----
   begin_tests(src/utils/SiconosAlgebra/test)
@@ -19,6 +19,12 @@ if(WITH_${COMPONENT}_TESTING)
     SOURCES SiconosMemoryTest.cpp ${SIMPLE_TEST_MAIN}
     DEPS "numerics;CPPUNIT::CPPUNIT"
     )
+
+  add_library(TestPlugin MODULE ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin/test/TestPlugin.cpp)
+  set_target_properties(TestPlugin 
+    PROPERTIES PREFIX ""
+    OUTPUT_NAME ${CMAKE_CURRENT_BINARY_DIR}/TestPlugin)
+
 
   # ---- Siconos tools tests ----
   begin_tests(src/utils/SiconosTools/test DEPS "CPPUNIT::CPPUNIT")

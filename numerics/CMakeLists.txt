@@ -124,7 +124,7 @@ endif()
 # Always searched and activated if found :
 #    lpsolve, mlcpsimplex, pthread, path (Ferris and VI)
 # Searched if asked in config (WITH_...=TRUE), error if not found :
-#    fclib, suite-sparse, gams
+#    suite-sparse, gams
 
 # - LpSolve -
 find_package(LPSOLVE QUIET)
@@ -144,12 +144,9 @@ if(Threads_FOUND)
   target_link_libraries(numerics PRIVATE Threads::Threads)
 endif()
 
-# - Fclib - 
+include(FetchContent)
+
 if(WITH_FCLIB)
-  find_package(FCLIB 3.0.0 CONFIG REQUIRED)
-  if(FCLIB_NOT_FOUND)
-    message(FATAL_ERROR "Can not find fclib package. Try to set FCLIB_ROOT.")
-  endif()
   target_link_libraries(numerics PUBLIC FCLIB::fclib)
 endif()
 
@@ -261,14 +258,8 @@ endif()
 # -- OpenMP --
 if(WITH_OPENMP)
   find_package(OpenMP REQUIRED)
-  # Notice : cmake  >= 3.9.6 is advised for a proper handling of openmp
-  if(${CMAKE_VERSION} VERSION_GREATER "3.9.6")
-    target_link_libraries(numerics  PRIVATE OpenMP::OpenMP_C)
-    target_link_libraries(numerics  PRIVATE OpenMP::OpenMP_CXX)
-  else()
-    message("Openmp flags : ${OpenMP_C_FLAGS}")
-    target_compile_options(numerics PRIVATE  ${OpenMP_C_FLAGS})
-  endif()
+  target_link_libraries(numerics  PRIVATE OpenMP::OpenMP_C)
+  target_link_libraries(numerics  PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
 # --- python bindings ---
@@ -276,9 +267,6 @@ if(WITH_${COMPONENT}_PYTHON_WRAPPER)
   add_subdirectory(swig)
 endif()
 
-if(WITH_PYTHON_WRAPPER)
-  add_dependencies(${COMPONENT} ${COMPONENT}_docstrings)
-endif()  
 
 # ---- Installation ----
 # Call siconos_component_install_setup(<COMPONENT>)
@@ -311,7 +299,7 @@ siconos_component_install_setup(${COMPONENT})
 # --- tests ---
 include(${COMPONENT}_tests.cmake)
 
-if(WITH_MPI AND WITH_${COMPONENT}_TESTING)
+if(WITH_MPI AND WITH_TESTING)
   # Note FP : temporary fix, to deal with PRIVATE deps of some components.
   # This will be reviewed later.
   target_include_directories(numerics-test PUBLIC ${MPI_C_INCLUDE_DIRS})

@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 /**\brief This class models a simple harmonic boundary conditions for
  *   prescribing the velocities in a Dynamical System. A simple
  *   boundary condition is considered to fix a component \f$ j \f$ of
- *   the velocity vector, i.e., \f$ v_j(t) = a +  b cos( \omega t+ \phi)\f$.
+ *   the velocity vector, i.e., \f$ v_j(t) = a +  b cos( \omega t+ \phi) \f$.
  *
  */
 class HarmonicBC : public  BoundaryCondition
@@ -51,13 +51,13 @@ public:
   virtual ~HarmonicBC();
 
   /** default function to compute the precribed velocities
+   *
    *  \param  time : the current time
    */
   virtual void computePrescribedVelocity(double time);
 
 protected:
-  /** serialization hooks
-  */
+  
   ACCEPT_SERIALIZATION(HarmonicBC);
 
   /** protected default constructor */

@@ -1,0 +1,7 @@
+sphinx
+breathe
+sphinx-rtd-theme
+sphinxcontrib-bibtex
+sphinxcontrib-websupport
+sphinx-bootstrap-theme
+ytsphinx

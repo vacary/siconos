@@ -2,7 +2,7 @@
 // Siconos is a program dedicated to modeling, simulation and control
 // of non smooth dynamical systems.
 //
-// Copyright 2020 INRIA.
+// Copyright 2022 INRIA.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,22 @@
 //
 
 // SWIG interface for Siconos Kernel
-%module(package="siconos", directors="1", allprotected="1") kernel
+
+%define DOCSTRING
+"A collection of low-level algorithms for solving basic algebra and optimization problem arising in the simulation of nonsmooth dynamical systems.
+
+Example of usage:
+
+>>> import siconos.kernel as sk
+>>> help(sk.LagrangianDS)
+"
+%enddef
+%module(package="siconos", directors="1", allprotected="1", docstring=DOCSTRING) kernel
 
 %include start.i
 
 // generated docstrings from doxygen xml output
-%include kernel-docstrings.i
+// %include kernel-docstrings.i
 
 #ifdef WITH_SERIALIZATION
 %{
@@ -48,7 +58,9 @@
 #include <RotationQuaternion.hpp>
 #include <SiconosVectorIterator.hpp>
 #include <vector>
+#include <cstddef>
 %}
+
 
 // ignores
 %ignore nullDeleter;
@@ -135,10 +147,10 @@ namespace boost
 };
 
 // a std::size_t definition (otherwise swig complains about it)
-namespace std
-{
-  typedef size_t size_t;
-}
+//namespace std
+//{
+//  typedef size_t size_t;
+//}
 
 
 

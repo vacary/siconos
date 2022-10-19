@@ -72,10 +72,6 @@
 class CohesiveFrictionContact : public FrictionContact
 {
 
-
-
-
-
   SP::SiconosVector _q_cohesion;
 protected:
   /** serialization hooks
@@ -118,22 +114,23 @@ public:
   /** compute vector q
    *  \param time the current time
    */
-  void computeq(double time);
+  void computeq(double time) override;
 
   /** build problem coefficients (if required)
       \param time the current time
       \return true if succeeded
    */
-  bool preCompute(double time);
+  bool preCompute(double time) override;
 
 
   /** build problem coefficients (if required)
       \param time the current time
       \return true if succeeded
   */
-  void postCompute();
+  void postCompute() override;
 
-
+  /* Check the compatibility fol the nslaw with the targeted OSNSP */
+  bool checkCompatibleNSLaw(NonSmoothLaw &nslaw) override;
 
   /** visitors hook
    */

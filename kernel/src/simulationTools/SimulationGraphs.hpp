@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,6 +99,7 @@ struct DynamicalSystemProperties
   SP::OneStepIntegrator osi;              /**< Integrator used for the given DynamicalSystem */
   SP::SimpleMatrix W;                     /**< Matrix for integration */
   SP::SimpleMatrix WBoundaryConditions;   /**< Matrix for integration of boundary conditions*/
+  SP::SimpleMatrix Winverse;              /**< Matrix for integration */
   unsigned int absolute_position;         /**< Absolute position of the ds variables in the unknown vector in osnsp*/
 //  SP::SiconosMemory _xMemory            /**< old value of x, TBD */
 
@@ -159,7 +160,7 @@ struct DynamicalSystemsGraph : public _DynamicalSystemsGraph
                                                                // determination
   // always needed -> DynamicalSystemProperties
 
-  /** serialization hooks */
+  
   ACCEPT_SERIALIZATION(DynamicalSystemsGraph);
 
   // to be installed with INSTALL_GRAPH_PROPERTIES
@@ -207,7 +208,7 @@ struct InteractionsGraph : public _InteractionsGraph
     lower_blockProj._store->erase(ed);
   }
 
-  /** serialization hooks */
+  
   ACCEPT_SERIALIZATION(InteractionsGraph);
 };
 

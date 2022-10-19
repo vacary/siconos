@@ -64,14 +64,15 @@ include(WindowsKernelSetup)
 include(ComponentSetup)
 create_siconos_component(${COMPONENT})
 
-# We require C++ 11. PUBLIC to propagate to other components.
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.8.0")
-  target_compile_features(kernel PUBLIC cxx_std_11)
-else()
-  set_property(TARGET kernel PROPERTY CXX_STANDARD 11)
-endif()
+# We require C++ 17. PUBLIC to propagate to other components.
+target_compile_features(kernel PUBLIC cxx_std_17)
 
 # --- Extra setup for the component ---
+# remove boring warnings from boost bindings includes
+set_source_files_properties(
+  ${CMAKE_SOURCE_DIR}/kernel/src/utils/SiconosAlgebra/EigenProblems.cpp
+  ${CMAKE_SOURCE_DIR}/kernel/src/utils/SiconosAlgebra/SimpleMatrixSolvers.cpp
+  PROPERTIES COMPILE_OPTIONS "-Wno-unused-variable")
 
 # Links with other Siconos components
 target_link_libraries(kernel PRIVATE externals numerics)
@@ -95,10 +96,6 @@ endif()
 if(WITH_${COMPONENT}_PYTHON_WRAPPER)
   add_subdirectory(swig)
 endif()
-
-if(WITH_PYTHON_WRAPPER)
-  add_dependencies(${COMPONENT} ${COMPONENT}_docstrings)
-endif()  
 
 # ---- Installation ----
 # Call siconos_component_install_setup(<COMPONENT>)

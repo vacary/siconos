@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,8 +73,6 @@ enum SICONOS_LCP_IPARAM
    SICONOS_LCP_IPARAM_ENUM_USE_DGELS =10,
    /** index in iparam to store to activate multiple solutions search */
    SICONOS_LCP_IPARAM_ENUM_MULTIPLE_SOLUTIONS =11,
-   /** **/
-   
   };
 
 enum SICONOS_LCP_DPARAM

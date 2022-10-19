@@ -1,293 +1,315 @@
-# Templates for ci jobs
-include: ci_gitlab/gitlab-ci-siconos-templates.yml
+# Templates for ci jobs - test cdash
+# It defines workflow rules, templates to create docker images, to configure, build siconos and so on.
+include:
+   - ci_gitlab/gitlab-ci-siconos-templates.yml
 
- 
-# ---- Docker build jobs -----
-
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, bullet but not OCE)
-# It's based on ubuntu 18.04.
-# It uses tag 'docker-build' to enforce run on a dedicated runner.
-docker-build:ubuntu18.04:
-  variables:
-    IMAGE_NAME: ubuntu18.04
-  stage: docker-build-layer2
-  extends: .docker-build
-  dependencies:
-    - docker-build:ubuntu18.04-no-python
-
-
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, bullet but not OCE)
-# It's based on ubuntu 18.04.
-docker-build:ubuntu18.04-oce:
-  variables:
-    IMAGE_NAME: ubuntu18.04-oce
-  extends: .docker-build
-  stage: docker-build-layer3
-  dependencies:
-    - docker-build:ubuntu18.04
-
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, bullet but not OCE)
-# It's based on debian stretch
-docker-build:debian-stretch:
-  variables:
-    IMAGE_NAME: debian-stretch
-  extends: .docker-build
-
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, bullet but not OCE)
-# It's based on debian buster
-docker-build:debian-buster:
+# --- First, build docker images that contains all the required dependencies to build siconos ---
+# This step is optional and run only when the commit message starts with "[docker-build]"
+debian-buster:docker-build:
   variables:
     IMAGE_NAME: debian-buster
   extends: .docker-build
 
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, bullet but not OCE)
-# It's based on debian unstable
-docker-build:debian-unstable:
+ubuntu20.4-light:docker-build:
   variables:
-    IMAGE_NAME: debian-unstable
+    IMAGE_NAME: ubuntu20.04-light
   extends: .docker-build
 
-    
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, mumps parallel)
-# It's based on ubuntu 18.04.
-docker-build:ubuntu18.04-mumps-par:
+ubuntu20.4:docker-build:
   variables:
-    IMAGE_NAME: ubuntu18.04-mumps-par
+    IMAGE_NAME: ubuntu20.04
   extends: .docker-build
-  stage: docker-build-layer3 # layer 3 since it's based on docker-build:ubuntu18.04
-  dependencies:
-    - docker-build:ubuntu18.04
+  stage: docker-build-layer2
+  needs: ["ubuntu20.4-light:docker-build"]
 
-# This job create a docker image with all required dependencies
-# (including serialization, bullet but not OCE)
-# It's based on ubuntu 18.04.
-docker-build:ubuntu18.04-no-python:
-  variables:
-    IMAGE_NAME: ubuntu18.04-no-python
-  extends: .docker-build
-
-
-# This job create a docker image with all required dependencies
-# (including serialization, bullet but not OCE)
-# It's based on ubuntu 18.04.
-docker-build:ubuntu18.04-doc:
-  variables:
-    IMAGE_NAME: ubuntu18.04-doc
-  extends: .docker-build
-  stage: docker-build-layer-doc
-  dependencies:
-    - docker-build:ubuntu18.04-oce
-
-
-# This job create a docker image with all required dependencies
-# (including serialization, bullet but not OCE).
-# It also download, build and install fclib/hdf5.
-# It's based on ubuntu 18.04.
-docker-build:ubuntu18.04-fclib:
-  variables:
-    IMAGE_NAME: ubuntu18.04-fclib
-  extends: .docker-build
-  stage: docker-build-layer3
-  dependencies:
-    - docker-build:ubuntu18.04
-
-# This job create a docker image with all required dependencies
-# (including serialization, python wrapper, bullet but not OCE)
-# Based on opensuse/leap 15.0
-docker-build:opensuse-leap-15.0:
+opensuse-leap-15.0:docker-build:
   variables:
     IMAGE_NAME: opensuse-leap-15.0
   extends: .docker-build
 
-# This job create a docker image with all required dependencies
-# (including serialization, bullet, OCE, pythonocc).
-# It's based on archlinux.
-docker-build:archlinux-oce:
-  variables:
-    IMAGE_NAME: archlinux-oce
-  extends: .docker-build
-
-# Centos distrib
-docker-build:centos-7:
+centos-7:docker-build:
   variables:
     IMAGE_NAME: centos-7
   extends: .docker-build
 
-
-# ---- Siconos build jobs -----
-
-# Siconos build and install, default config
-# (based on cmake/default_siconos.cmake)
-# on ubuntu 18.04.
-install_siconos:ubuntu18.04:
+fedora33:docker-build:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
-  extends: .siconos-build
-  artifacts:
-    paths:
-      - build
+    IMAGE_NAME: fedora-33
+  extends: .docker-build
 
-# Same as above but with many devel (warnings ...) options activated.
-install_siconos:ubuntu18.04-devmode:
+ubuntu22.04:docker-build:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_devmode.cmake
-  extends: .siconos-build
-  artifacts:
-    paths:
-      - build
+    IMAGE_NAME: ubuntu22.04
+  extends: .docker-build
 
-install_siconos:ubuntu18.04-paranoidmode:
+# A specific image, that will be used to install siconos,
+# get examples and provide some notebooks to
+# run siconos software.
+jupyter-notebook:docker-build:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_paranoidmode.cmake
-  extends: .siconos-build
-  artifacts:
-    paths:
-      - build
-  allow_failure: true
-  when: manual
-      
-# Siconos build and install, default config
-# (based on cmake/default_siconos.cmake)
-# on debian buster
-install_siconos:debian-buster:
+    IMAGE_NAME: jupyterlab
+  extends: .docker-build
+  stage: docker-build
+
+
+# Manual jobs, used to create docker images.
+docker-manual-img:
+  extends: .docker-rules
+  stage: docker-build-layer2
+  trigger:
+    include:
+      - ci_gitlab/docker-manual.yml
+
+
+# -------------- Configure, build and test Siconos --------------
+     
+debian-buster:configure:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/debian-buster
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
-  extends: .siconos-build
-  # artifacts:
-  #   paths:
-  #     - build
+     IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/debian-buster
+     cdash_submit: 1
+     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+  extends:
+    - .siconos-configure
+    - .full-ci-rules
 
-# Siconos build and install, default config
-# (based on cmake/default_siconos.cmake)
-# on debian unstable. Manual only
-install_siconos:debian-unstable:
+debian-buster:build:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/debian-unstable
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
-  extends: .siconos-build
-  allow_failure: true
-  when: manual
-  # artifacts:
-  #   paths:
-  #     - build
-    
-# Siconos build and install, default config
-# (based on cmake/default_siconos.cmake)
-# on ubuntu 18.04.
-install_siconos:opensuse-leap-15.0:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/debian-buster
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+  extends:
+    - .siconos-build
+    - .full-ci-rules
+  needs: ["debian-buster:configure"]
+
+debian-buster:test:
+    variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/debian-buster
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+    needs: ["debian-buster:build"]
+    extends:
+      - .siconos-test
+      - .full-ci-rules
+
+ubuntu20.04-fclib:configure:
+   variables:
+     IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu20.04
+     cdash_submit: 1
+     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_fclib.cmake
+   extends:
+    - .siconos-configure
+    - .full-ci-rules
+
+ubuntu20.04-fclib:build:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/opensuse-leap-15.0
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
-  extends: .siconos-build
-  # artifacts:
-  #   paths:
-  #     - build
-
-
-# Siconos build and install, without python wrappers
-# (default conf, WITH_PYTHON_WRAPPER=OFF)
-# on ubuntu 18.04.
-install_siconos:ubuntu18.04-no-python:
-  variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04-no-python
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_no_python.cmake
-  extends: .siconos-build
-
-
-# Siconos build and install, with mechanisms
-# (oce and pythonocc parts activated).
-# on ubuntu 18.04.
-install_siconos:ubuntu18.04-oce:
-  variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04-oce
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_mechanisms.cmake
-  extends: .siconos-build
-
-# Siconos build and install, with mumps parallel activated
-# on ubuntu 18.04.
-install_siconos:ubuntu18.04-mumps-par:
-  variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04-mumps-par
-    cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_mumps_par.cmake
-  extends: .siconos-build
-
-
-# Siconos build and install, with fclib ON
-# on ubuntu 18.04.
-install_siconos:ubuntu18.04-fclib:
-  variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04-fclib
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu20.04
     cdash_submit: 1
     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_fclib.cmake
-  extends: .siconos-build
+  extends:
+    - .siconos-build
+    - .full-ci-rules
+  needs: ["ubuntu20.04-fclib:configure"]
 
-# Siconos build and install, with serialization/generation ON
-# on ubuntu 18.04.
-install_siconos:ubuntu18.04-serialization:
+ubuntu20.04-fclib:test:
+    variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu20.04
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_fclib.cmake
+    needs: ["ubuntu20.04-fclib:build"]
+    extends:
+      - .siconos-test
+      - .full-ci-rules
+
+ubuntu22.04:configure:
+   variables:
+     IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+     cdash_submit: 1
+     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+   extends:
+    - .siconos-configure
+
+ubuntu22.04:build:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/ubuntu18.04-doc
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+  extends:
+    - .siconos-build
+  needs: ["ubuntu22.04:configure"]
+
+ubuntu22.04:test:
+    variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+    needs: ["ubuntu22.04:build"]
+    extends:
+      - .siconos-test
+ 
+ubuntu22.04-debug:configure:
+   variables:
+     IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+     cdash_submit: 1
+     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_devmode.cmake
+   extends:
+    - .siconos-configure
+
+ubuntu22.04-debug:build:
+  variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_devmode.cmake
+  extends:
+    - .siconos-build
+  needs: ["ubuntu22.04-debug:configure"]
+
+ubuntu22.04-debug:test:
+    variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_devmode.cmake
+    needs: ["ubuntu22.04-debug:build"]
+    extends:
+      - .siconos-test
+
+
+fedora-33:configure:
+  variables:
+     IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/fedora-33
+     cdash_submit: 1
+     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+  extends:
+    - .siconos-configure
+    - .full-ci-rules
+
+fedora-33:build:
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/fedora-33
     cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_serialization.cmake
-    allow_parallel_build: 0
-  extends: .siconos-build
-  artifacts:
-    paths:
-      - build
-    when: on_failure
+    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+  extends:
+    - .siconos-build
+    - .full-ci-rules
+  needs: ["fedora-33:configure"]
 
-# Siconos build and install, with serialization/generation ON
-# on debian unstable.
-install_siconos:debian-unstable-serialization:
+fedora-33:test:
+    variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/fedora-33
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+    needs: ["fedora-33:build"]
+    extends:
+    - .siconos-test
+    - .full-ci-rules
+
+jupyterlab:configure:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/debian-unstable
+     OPENBLAS_NUM_THREADS: 1
+     IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/jupyterlab
+     cdash_submit: 1
+     user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_notebook.cmake
+     CMAKE_PREFIX_PATH: /opt/conda
+  extends:
+    - .siconos-configure
+
+jupyterlab:build:
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/jupyterlab
     cdash_submit: 1
-    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_with_serialization.cmake
-    allow_parallel_build: 0
-  extends: .siconos-build
-  allow_failure: true
-  artifacts:
-    paths:
-      - build
-    when: on_failure
+    user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_notebook.cmake
+  extends:
+    - .siconos-build
+  needs: ["jupyterlab:configure"]
 
-# Siconos build and install, default setup
-# on centos 7
-install_siconos:centos-7:
+jupyterlab:test:
+    variables:
+      IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/jupyterlab
+      cdash_submit: 1
+      user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_notebook.cmake
+    needs: ["jupyterlab:build"]
+    extends:
+    - .siconos-test
+
+# Generate sico install
+
+ubuntu22:install:
   variables:
-    IMAGE_NAME: $CI_REGISTRY_IMAGE/centos-7
-  extends: .siconos-build
-  script: 
-     - "sh ci_gitlab/install_siconos_centos.sh"
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu22.04
+    siconos_docker_name: siconos-$CI_COMMIT_REF_NAME
+  extends: .siconos-install
+  needs: ["ubuntu22.04:build"]
+
+debian-buster:install:
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/debian-buster
+    siconos_docker_name: siconos-$CI_COMMIT_REF_NAME-debian-buster
+  extends:
+    - .siconos-install
+    - .full-ci-rules
+  needs: ["debian-buster:build"]
+
+
+jupyterlab:install:
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/jupyterlab
+    siconos_docker_name: siconoslab-$CI_COMMIT_REF_NAME
+  extends:
+    - .siconos-jupyterlab-install
+  needs: ["jupyterlab:build"]
+
+# Start CI in siconos-tutorials, when required
+# How? Use [with examples] in your commit message.
+# Based on the specific docker image build and saved during ubuntu22:install step.
+bridge:examples:
+  variables:
+    SICONOS_DOCKER_NAME: siconos-$CI_COMMIT_REF_NAME
+    TRIGGERED: 1
+  stage: examples
+  trigger: 
+    project: nonsmooth/siconos-tutorials
+    strategy: depend
+  needs: ["ubuntu22:install"]
+  extends:
+    - .examples-rules
+    
 
 
 # --- Creates a new pipeline to build documentation
 # Trigger : manual.
 # When the job is activated (manual trigger through the web interface),
 # it starts a new pipeline, i.e. includes jobs declared in docs/build-doc.yml
-siconos:build-doc:
-  stage: build
+generate-doc:
+  stage: configure
   trigger:
     include:
       - docs/build-doc.yml
   when: manual
 
+# -- Jobs on demand --
+# Triggered through the interface
+# Build siconos with oce component
+siconos-oce:
+  stage: configure
+  trigger:
+    include:
+      - ci_gitlab/siconos-with-oce.yml
+  when: manual
 
+ubuntu18.04:full:
+      variables:
+        IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu18.04
+        cdash_submit: 1
+        user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+      extends:
+        - .siconos-full
+      when: manual
+
+ubuntu20.04:full:
+      variables:
+        IMAGE_NAME: $CI_REGISTRY_IMAGE/sources/ubuntu20.04
+        cdash_submit: 1
+        user_file: $CI_PROJECT_DIR/$siconos_confs/siconos_default.cmake
+      extends:
+        - .siconos-full
+      when: manual

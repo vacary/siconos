@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,6 @@ class SMCTest : public CppUnit::TestFixture
 {
 
 private:
-  /** serialization hooks
-  */
   ACCEPT_SERIALIZATION(SMCTest);
 
 
@@ -89,7 +87,7 @@ private:
 
 public:
 
-  SMCTest(): _n(2), _h(0.05), _t0(0.0), _T(100.0), _tol(7e-11), _beta(0.1) {}
+  SMCTest(): _n(2), _h(0.05), _t0(0.0), _T(100.0), _tol(7.5e-11), _beta(0.1) {}
   void setUp();
   void tearDown();
 

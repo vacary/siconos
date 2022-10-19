@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ using namespace RELATION;
 // #define DEBUG_MESSAGES
 // #define DEBUG_WHERE_MESSAGES
 #include "GenericMechanical_cst.h"          // for SICONOS_GENERIC_MECHANICA...
-#include <debug.h>
+#include "siconos_debug.h"
 
 
 GenericMechanical::GenericMechanical(int FC3D_Solver_Id):
@@ -122,15 +122,31 @@ void GenericMechanical::computeDiagonalInteractionBlock(const InteractionsGraph:
     else if(Type::value(*(inter->nonSmoothLaw()))
             == Type::NewtonImpactFrictionNSL)
     {
-      FrictionContactProblem * pAux =
-        (FrictionContactProblem *)gmp_add(_pnumerics_GMP, SICONOS_NUMERICS_PROBLEM_FC3D, size);
-      SP::NewtonImpactFrictionNSL nsLaw =
-        std::static_pointer_cast<NewtonImpactFrictionNSL> (inter->nonSmoothLaw());
-      pAux->dimension = 3;
-      pAux->numberOfContacts = 1;
-      *(pAux->mu) = nsLaw->mu();
+      if (size ==3)
+      {
+        FrictionContactProblem * pAux =
+          (FrictionContactProblem *)gmp_add(_pnumerics_GMP, SICONOS_NUMERICS_PROBLEM_FC3D, size);
+        SP::NewtonImpactFrictionNSL nsLaw =
+          std::static_pointer_cast<NewtonImpactFrictionNSL> (inter->nonSmoothLaw());
+        pAux->dimension = 3;
+        pAux->numberOfContacts = 1;
+        *(pAux->mu) = nsLaw->mu();
 
-      DEBUG_PRINT(" Type::NewtonImpactFrictionNSL\n");
+        DEBUG_PRINT(" Type::NewtonImpactFrictionNSL\n");
+      }
+      else if (size ==2)
+      {
+        FrictionContactProblem * pAux =
+          (FrictionContactProblem *)gmp_add(_pnumerics_GMP, SICONOS_NUMERICS_PROBLEM_FC2D, size);
+        SP::NewtonImpactFrictionNSL nsLaw =
+          std::static_pointer_cast<NewtonImpactFrictionNSL> (inter->nonSmoothLaw());
+        pAux->dimension = 2;
+        pAux->numberOfContacts = 1;
+        *(pAux->mu) = nsLaw->mu();
+        
+        DEBUG_PRINT(" Type::NewtonImpactFrictionNSL\n");
+      }
+        
     }
     else
     {

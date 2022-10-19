@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@
 
 /* #define DEBUG_MESSAGES */
 /* #define DEBUG_STDOUT */
-#include "debug.h"
+#include "siconos_debug.h"
 
 
 const char* const   SICONOS_GLOBAL_FRICTION_3D_IPM_STR = "GFC3D IPM";
@@ -236,7 +236,7 @@ static double getNewtonStepLength(const double * const x, const double * const d
 static void primalResidualVector(const double * velocity, NumericsMatrix * H,
                                  const double * globalVelocity, const double * w, double * out)
 {
-  double nd = H->size0;
+  size_t nd = H->size0;
 
   /* The memory for the result vectors should be allocated using calloc
    * since H is a sparse matrix. In other case the behaviour will be undefined.*/
@@ -262,7 +262,7 @@ static void dualResidualVector(NumericsMatrix * M, const double * globalVelocity
                                NumericsMatrix * H, const double * reaction, const double * f,
                                double * out)
 {
-  double m = H->size1;
+  size_t m = H->size1;
 
   /* The memory for the result vectors should be allocated using calloc
    * since H is a sparse matrix. In other case the behaviour will be undefined.*/

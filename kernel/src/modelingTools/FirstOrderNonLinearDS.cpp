@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 
 // #define DEBUG_MESSAGES
 // #define DEBUG_STDOUT
-#include "debug.h"
+#include "siconos_debug.h"
 #include <iostream>
 
 // ===== CONSTRUCTORS =====
@@ -139,7 +139,10 @@ void FirstOrderNonLinearDS::initializeNonSmoothInput(unsigned int level)
     _r.reset(new SiconosVector(_n));
 }
 
-
+void FirstOrderNonLinearDS::resetToInitialState()
+{
+  *(_x[0]) = *_x0;
+}
 
 // ===== MEMORY MANAGEMENT FUNCTIONS =====
 

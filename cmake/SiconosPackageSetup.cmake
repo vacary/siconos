@@ -28,7 +28,8 @@ if(WITH_PYTHON_WRAPPER)
   # deal with files installed for python 
   add_custom_target(uninstall
     echo >> ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
-    COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/python_install_manifest.txt >> ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
+    #COMMAND cat ${CMAKE_CURRENT_BINARY_DIR}/python_install_manifest.txt >> ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
+    COMMAND PYTHONPATH=${SICONOS_PYTHON_INSTALL_DIR} ${PYTHON_EXECUTABLE} -m pip uninstall siconos
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 else()
   add_custom_target(uninstall
@@ -80,3 +81,17 @@ install(EXPORT siconosTargets
 install(
   FILES ${CMAKE_BINARY_DIR}/siconos-config.cmake ${CMAKE_BINARY_DIR}/siconos-config-version.cmake
   DESTINATION ${ConfigPackageLocation})
+
+if(WITH_GIT)
+  # Save and install a file which contain git references for the current source directory
+  # (branch and short commit number), mostly used by continuous integration and cdash 
+  # to tag cdash builds.
+  # git reference name (branch, tag ...) 
+  execute_process(COMMAND
+    git rev-parse --abbrev-ref HEAD
+    OUTPUT_VARIABLE COMMIT_REF_NAME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  file(WRITE ${CMAKE_BINARY_DIR}/siconos-commit.txt "${COMMIT_REF_NAME}-${SOURCE_ABBREV_GIT_SHA1}")
+  install(FILES ${CMAKE_BINARY_DIR}/siconos-commit.txt DESTINATION share)
+endif()

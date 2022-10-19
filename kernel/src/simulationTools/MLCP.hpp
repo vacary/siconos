@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 /*! \file MLCP.hpp
 \brief Linear Complementarity Problem formulation and solving
 */
@@ -23,48 +23,44 @@
 #define MLCP_H
 
 #include "LinearOSNS.hpp"
+
 #include <mlcp_cst.h>
 
 #define MLCP_NB_BLOCKS_MAX 200
-/** Formalization and Resolution of a Mixed Linear Complementarity Problem (MLCP)
- 
-  \section MLCPintro Aim of the MLCP class
- 
-  This class is devoted to the formalization and the resolution of the
-  Mixed Linear Complementarity Problem (MLCP) defined by :
+/** 
+    Formalization and Resolution of a Mixed Linear Complementarity Problem
+    (MLCP)
+    
+    This class is devoted to the formalization and the resolution of the
+    Mixed Linear Complementarity Problem (MLCP) defined by :
 
-  \rst
-
-  .. math::
-
+    \f[
      0 =  Au + Cv + a \\
      \\
      z =  Du + Bv + b \\
      \\
      v \geq 0, z \geq 0,  z^{T} v =0
+    \f]
 
-  \endrst
-
-  where
-     - \f$ u \in R^{n} \f$ \f$ v \in R^{m} \f$  and \f$z \in R^{m} \f$ are the unknowns,
-     - \f$ a \in R^{n} \f$ and \f$ b \in R^{m} \f$
-     - \f$ A \in R^{n \times n } \f$
-     - \f$ B \in R^{m \times m } \f$
-     - \f$ C \in R^{n \times m } \f$
-     - \f$ D \in R^{m \times n } \f$
- 
-   The MLCP main components are:
-   - a problem (variables A,B,C,D,a,b and size of the problem), which directly corresponds to the MixedLinearComplementarityProblem structure of Numerics
-   - the unknowns u,v and z
-   
- */
-class MLCP : public LinearOSNS
-{
+    where
+    - \f$ u \in R^{n} \f$ \f$ v \in R^{m} \f$  and \f$ z \in R^{m} \f$ are the
+    unknowns,
+    - \f$ a \in R^{n} \f$ and \f$ b \in R^{m} \f$
+    - \f$ A \in R^{n \times n } \f$
+    - \f$ B \in R^{m \times m } \f$
+    - \f$ C \in R^{n \times m } \f$
+    - \f$ D \in R^{m \times n } \f$
+    
+    The MLCP main components are:
+    - a problem (variables A,B,C,D,a,b and size of the problem), which directly
+    corresponds to the MixedLinearComplementarityProblem structure of Numerics
+    - the unknowns u,v and z
+    
+*/
+class MLCP : public LinearOSNS {
 protected:
-  /** serialization hooks
-  */
-  ACCEPT_SERIALIZATION(MLCP);
 
+  ACCEPT_SERIALIZATION(MLCP);
 
   /** n is the number of equality */
   int _n = 0;
@@ -78,48 +74,48 @@ protected:
   SP::MixedLinearComplementarityProblem _numerics_problem;
 
 public:
-
   /** constructor from data
-      \param numericsSolverId id of Numerics solver
-      (optional, default = SICONOS_MLCP_ENUM the enumerative solver)
-  */
+   *
+   *  \param numericsSolverId id of Numerics solver
+   *  (optional, default = SICONOS_MLCP_ENUM the enumerative solver)
+   */
   MLCP(int numericsSolverId = SICONOS_MLCP_ENUM);
 
-  /**  constructor from a pre-defined solver options set.
-       \param options, the options set, 
-       \rst
-       see :ref:`problems_and_solvers` for details.
-       \endrst
-  */
+  /** constructor from a pre-defined solver options set
+   *
+   *  \param options the options set
+   */
   MLCP(SP::SolverOptions options);
-  
-  /** destructor
-  */
-  virtual ~MLCP() {reset();};
 
-  /** compute equalities/inequalities sizes and set corresponding values in
+  /** destructor
+   */
+  virtual ~MLCP() { reset(); };
+
+  /** 
+      compute equalities/inequalities sizes and set corresponding values in
       numerics problem
-      \param inter1 Interaction used to get a non-smooth law and the constraints sizes.
+      
+      \param inter1 Interaction used to get a non-smooth law and the constraints
+      sizes.
       \param inter2 another interaction, not used indeed (?)
   */
   virtual void computeOptions(SP::Interaction inter1, SP::Interaction inter2);
 
   /** Update blocks used to compute M matrix.
    */
-  virtual void updateInteractionBlocks();
+  void updateInteractionBlocks() override;
 
   /** get the number of equality constraints,
-  *  \return int
-  */
-  inline int getn() const
-  {
-    return _n;
-  }
+   *
+   *  \return int
+   */
+  inline int getn() const { return _n; }
 
   // --- numerics MLCP ---
   /** get the pointer on the Numerics MLCP,
-  *  \return SP::MixedLinearComplementarityProblem
-  */
+   *
+   *  \return SP::MixedLinearComplementarityProblem
+   */
   inline SP::MixedLinearComplementarityProblem getNumericsMLCP()
   {
     return _numerics_problem;
@@ -130,43 +126,43 @@ public:
   virtual void reset();
 
   /** compute extra-diagonal interactionBlock-matrix
+   *
    *  \param ed an edge descriptor
    */
-  virtual void computeInteractionBlock(const InteractionsGraph::EDescriptor& ed);
+  void
+  computeInteractionBlock(const InteractionsGraph::EDescriptor &ed) override;
 
   /** compute diagonal Interaction block
-   * \param vd a vertex descriptor
+   *
+   *  \param vd a vertex descriptor
    */
-  virtual void computeDiagonalInteractionBlock(const InteractionsGraph::VDescriptor& vd);
-
-  /** Pre compute 
-   * \param time current time
-   * \return bool
-   */
-  virtual bool preCompute(double time);
+  void computeDiagonalInteractionBlock(
+      const InteractionsGraph::VDescriptor &vd) override;
 
   /** Compute the unknown z and w and update the Interaction (y and lambda )
-  *  \param time current time
-  *  \return int, information about the solver convergence.
-  */
-  int compute(double time);
-
-  /** initialize
-   * \param sim the Simulation
+   * 
+   *  \param time current time
+   *  \return int, information about the solver convergence.
    */
-  void initialize(SP::Simulation sim);
+  int compute(double time) override;
 
+  /**
+     Call numerics solver.
+     
+     \return int information about the solver convergence
+     (output from numerics driver, mixedlinearComplementarity_driver, check
+     numerics doc. for details).
+  */
+  int solve();
 
   /** print the data to the screen
-  */
-  virtual void display() const;
-
-   /* Check the compatibility fol the nslaw with the targeted OSNSP */
-  bool checkCompatibleNSLaw(NonSmoothLaw& nslaw);
-  /** visitors hook
    */
-  ACCEPT_STD_VISITORS();
+  void display() const override;
 
+  /** Check the compatibility fol the nslaw with the targeted OSNSP */
+  bool checkCompatibleNSLaw(NonSmoothLaw &nslaw) override;
+
+  ACCEPT_STD_VISITORS();
 };
 
 #endif // MLCP_H

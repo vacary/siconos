@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,7 @@ void genericMechanicalProblem_free(GenericMechanicalProblem * pGMP, unsigned int
       free(((RelayProblem *)(pElem->problem))->M);
       break;
     }
+    case SICONOS_NUMERICS_PROBLEM_FC2D:
     case SICONOS_NUMERICS_PROBLEM_FC3D:
     {
       free(((FrictionContactProblem*)(pElem->problem))->M);
@@ -79,8 +80,8 @@ void genericMechanicalProblem_free(GenericMechanicalProblem * pGMP, unsigned int
   if(level & NUMERICS_GMP_FREE_MATRIX)
   {
     assert(pGMP->M);
-    int storageType = pGMP->M->storageType;
-    if(storageType == 0)
+    NM_types storageType = pGMP->M->storageType;
+    if(storageType == NM_DENSE)
       free(pGMP->M->matrix0);
     else
       SBMfree(pGMP->M->matrix1, NUMERICS_SBM_FREE_BLOCK | NUMERICS_SBM_FREE_SBM);
@@ -166,6 +167,21 @@ void * gmp_add(GenericMechanicalProblem * pGMP, int problemType, int size)
     newProblem->q = pFC3D->q;
     break;
   }
+  case(SICONOS_NUMERICS_PROBLEM_FC2D):
+  {
+    newProblem->problem = (void *) malloc(sizeof(FrictionContactProblem));
+    FrictionContactProblem* pFC2D = (FrictionContactProblem*) newProblem->problem;
+    pFC2D->mu = (double*) malloc(sizeof(double));
+    pFC2D->M = NM_new();
+    pFC2D->M->storageType = 0; /*Local prb is dense*/
+    pFC2D->M->size0 = size;
+    pFC2D->M->size1 = size;
+    pFC2D->numberOfContacts = 1;
+    pFC2D->q = (double*) malloc(size * sizeof(double));
+    pFC2D->dimension = 3;
+    newProblem->q = pFC2D->q;
+    break;
+  }
   default:
     printf("GenericMechanicalProblem.h gmp_add : problemType unknown: %d . \n", problemType);
     exit(EXIT_FAILURE);
@@ -205,7 +221,7 @@ void genericMechanicalProblem_printInFile(GenericMechanicalProblem*  pGMP, FILE*
   for(int ii = 0; ii < pGMP->size; ii++)
     fprintf(file, "%e\n", pGMP->q[ii]);
   fprintf(file, "\n");
-  /*Print lthe type and options (mu)*/
+  /*Print the type and options (mu)*/
   while(curProblem)
   {
     fprintf(file, "%d\n", curProblem->type);

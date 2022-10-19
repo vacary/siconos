@@ -75,7 +75,7 @@ public:
 
   /** print the data to the screen
    */
-  void display() const;
+  void display() const override;
 
   /** Visitors hook
    */

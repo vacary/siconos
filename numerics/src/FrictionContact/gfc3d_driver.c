@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,17 @@
 #include "NonSmoothDrivers.h"              // for gfc3d_driver
 #include "NumericsFwd.h"                   // for SolverOptions, GlobalFrict...
 #include "SolverOptions.h"                 // for SolverOptions, solver_opti...
-#include "debug.h"                         // for DEBUG_EXPR
+#include "siconos_debug.h"                         // for DEBUG_EXPR
 #include "gfc3d_Solvers.h"                 // for gfc3d_ACLMFixedPoint, gfc3...
 #include "numerics_verbose.h"              // for numerics_printf_verbose
-#include "NumericsMatrix.h"
+#include "gfc3d_balancing.h"
+#include "gfc3d_compute_error.h"
+#include "SiconosBlas.h"                         // for cblas_dcopy, cblas_dscal
+
 #ifdef  DEBUG_MESSAGES
 #include "NumericsVector.h"
 #include "NumericsMatrix.h"
 #endif
-int * Global_ipiv = NULL;
-int  Global_MisInverse = 0;
-int  Global_MisLU = 0;
 
 const char* const SICONOS_GLOBAL_FRICTION_3D_NSGS_WR_STR = "GFC3D_NSGS_WR";
 const char* const SICONOS_GLOBAL_FRICTION_3D_NSN_AC_WR_STR = "GFC3D_NSN_AC_WR";
@@ -51,16 +51,57 @@ const char* const  SICONOS_GLOBAL_FRICTION_3D_VI_FPP_STR = "GFC3D_VI_FPP";
 const char* const SICONOS_GLOBAL_FRICTION_3D_ADMM_WR_STR = "GFC3D_ADMM_WR";
 
 
+static int gfc3d_balancing_check_drift(GlobalFrictionContactProblem* balanced_problem,
+                                       GlobalFrictionContactProblem* problem,
+                                       double *reaction, double *velocity,
+                                       double* globalVelocity,  SolverOptions* options)
+{
+  if(options->iparam[SICONOS_FRICTION_3D_IPARAM_RESCALING]>0)
+  {
+    size_t nc = problem->numberOfContacts;
+    size_t n = problem->M->size0;
+    size_t m = 3 * nc;
+
+    double norm_b = cblas_dnrm2(m, balanced_problem->b, 1);
+    double norm_q = cblas_dnrm2(n, balanced_problem->q, 1);
+    double error_balancing = 1e24;
+    double tolerance = options->dparam[SICONOS_DPARAM_TOL];
+    gfc3d_compute_error(balanced_problem,  reaction, velocity, globalVelocity,
+                        tolerance, options,
+                        norm_q, norm_b,  &error_balancing);
+
+    /* Come back to original variables */
+    gfc3d_balancing_back_to_original_variables(balanced_problem, options,
+                                               reaction, velocity, globalVelocity);
+
+    norm_b = cblas_dnrm2(m, problem->b, 1);
+    norm_q = cblas_dnrm2(n, problem->q, 1);
+    double error =0.0;
+    gfc3d_compute_error(problem,  reaction, velocity, globalVelocity,
+                        tolerance, options,
+                        norm_q, norm_b,  &error);
+
+    numerics_printf_verbose(0,"error with balancing = %8.4e", error_balancing);
+    numerics_printf_verbose(0,"error with original = %8.4e", error);
+  }
+  //else continue
+
+  return 0;
+
+}
+
+
 int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double *velocity,
                  double* globalVelocity,  SolverOptions* options)
 {
   assert(options->isSet);
-  DEBUG_EXPR(NV_display(globalVelocity,problem->M->size0););
+  DEBUG_EXPR(NV_display(globalVelocity,problem_ori->M->size0););
   if(verbose > 0)
     solver_options_print(options);
 
   /* Solver name */
   /*  const char* const  name = options->solverName;*/
+
 
 
   int info = -1 ;
@@ -84,9 +125,6 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call NSGS_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_nsgs_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
 
@@ -95,9 +133,6 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call NSGSV_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_nsgs_velocity_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
   }
@@ -105,9 +140,6 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call NSN_AC_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_nonsmooth_Newton_AlartCurnier_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
 
@@ -116,9 +148,6 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call PROX_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_proximal_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
 
@@ -127,9 +156,6 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call DSFP_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_DeSaxceFixedPoint_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
 
@@ -138,18 +164,12 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call TFP_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_TrescaFixedPoint_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
 
   }
   case SICONOS_GLOBAL_FRICTION_3D_NSGS:
   {
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_nsgs(problem, reaction, velocity, globalVelocity,
                &info, options);
     break;
@@ -157,8 +177,25 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   }
   case SICONOS_GLOBAL_FRICTION_3D_NSN_AC:
   {
-    gfc3d_nonsmooth_Newton_AlartCurnier(problem, reaction, velocity,
+    /* Balancing */
+    /* here, the balancing is done outside the solver */
+    /* therfore the solver does not account for the possible drift of error measure between
+       the balanced problem and the original one */
+
+    GlobalFrictionContactProblem* balanced_problem = gfc3d_balancing_problem(problem,options);
+    gfc3d_balancing_go_to_balanced_variables(balanced_problem, options,
+                                             reaction, velocity, globalVelocity);
+    /* Call the solver with balanced data */
+    gfc3d_nonsmooth_Newton_AlartCurnier(balanced_problem, reaction, velocity,
                                         globalVelocity, &info, options);
+
+    /* check if the drift is large */
+    // int info_check_drift =
+    gfc3d_balancing_check_drift(balanced_problem,problem, reaction, velocity, globalVelocity,
+                                options);
+
+    problem = gfc3d_balancing_free(problem, options);
+
     break;
 
   }
@@ -207,9 +244,6 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction, double
   {
 
     numerics_printf_verbose(1," ========================== Call NSGS_WR solver with reformulation into Friction-Contact 3D problem ==========================\n");
-    Global_ipiv = NULL;
-    Global_MisInverse = 0;
-    Global_MisLU = 0;
     gfc3d_admm_wr(problem, reaction, velocity, globalVelocity, &info, options);
     break;
 

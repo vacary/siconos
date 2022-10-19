@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@
 #include "SiconosBlas.h"                   // for cblas_dnrm2, cblas_dgemv
 #include "SolverOptions.h"                 // for SolverOptions, solver_opti...
 #include "fc3d_compute_error.h"            // for fc3d_unitary_compute_and_a...
+#include "fc2d_compute_error.h"            // for fc3d_unitary_compute_and_a...
 #include "lcp_cst.h"                       // for SICONOS_LCP_LEMKE
 #include "numerics_verbose.h"              // for verbose
 #include "relay_cst.h"                     // for SICONOS_RELAY_LEMKE
@@ -46,7 +47,7 @@
 /* #define DEBUG_NOCOLOR */
 /* #define DEBUG_STDOUT */
 /* #define DEBUG_MESSAGES */
-#include "debug.h"                         // for DEBUG_PRINTF, DEBUG_EXPR
+#include "siconos_debug.h"                         // for DEBUG_PRINTF, DEBUG_EXPR
 
 #ifdef DEBUG_MESSAGES
 #include "NumericsVector.h"
@@ -57,7 +58,7 @@ const char* const   SICONOS_GENERIC_MECHANICAL_NSGS_STR = "GMP_NSGS";
 int gmp_compute_error(GenericMechanicalProblem* pGMP, double *reaction, double *velocity, double tol, SolverOptions* options, double * err)
 {
   listNumericsProblem * curProblem = pGMP->firstListElem;
-  int storageType = pGMP->M->storageType;
+  NM_types storageType = pGMP->M->storageType;
   NumericsMatrix* numMat = pGMP->M;
   int currentRowNumber = 0;
   int ii;
@@ -65,7 +66,7 @@ int gmp_compute_error(GenericMechanicalProblem* pGMP, double *reaction, double *
   int curSize = 0;
   *err = 0.0;
   double localError = 0;
-  double * bufForLocalProblemDense = (storageType == 0) ? (double*) malloc(pGMP->maxLocalSize * pGMP->maxLocalSize * sizeof(double)) : 0;
+  double * bufForLocalProblemDense = (storageType == NM_DENSE) ? (double*) malloc(pGMP->maxLocalSize * pGMP->maxLocalSize * sizeof(double)) : 0;
 
 #ifdef GENERICMECHANICAL_DEBUG_COMPUTE_ERROR
   numerics_printf("GenericMechanical compute_error BEGIN:\n");
@@ -92,7 +93,7 @@ int gmp_compute_error(GenericMechanicalProblem* pGMP, double *reaction, double *
     /*add the missing product to the velocity: the diagonal one*/
 
     double * diagBlock = 0;
-    if(storageType == 0)  /*dense*/
+    if(storageType == NM_DENSE)  /*dense*/
     {
       NM_extract_diag_block(numMat, currentRowNumber, posInX, curSize, &bufForLocalProblemDense);
       diagBlock = bufForLocalProblemDense;
@@ -177,6 +178,20 @@ int gmp_compute_error(GenericMechanicalProblem* pGMP, double *reaction, double *
 #endif
       break;
     }
+    case SICONOS_NUMERICS_PROBLEM_FC2D:
+    {
+      FrictionContactProblem * fcProblem = (FrictionContactProblem *)curProblem->problem;
+      localError = 0.;
+      double worktmp[2];
+      fc2d_unitary_compute_and_add_error(reaction + posInX, velocity + posInX, fcProblem->mu[0], &localError, worktmp);
+      localError = sqrt(localError) / (1 + cblas_dnrm2(curSize, curProblem->q, 1));
+      if(localError > *err)
+        *err = localError ;
+#ifdef GENERICMECHANICAL_DEBUG_COMPUTE_ERROR
+      numerics_printf("GenericMechanical_driver FC2D, Local Velocity v_n=%e v_t1=%e v_t2=%e localerror=%e\n", *(velocity + posInX), *(velocity + posInX + 1),  localError);
+#endif
+      break;
+    }
     case SICONOS_NUMERICS_PROBLEM_FC3D:
     {
       FrictionContactProblem * fcProblem = (FrictionContactProblem *)curProblem->problem;
@@ -205,7 +220,7 @@ int gmp_compute_error(GenericMechanicalProblem* pGMP, double *reaction, double *
   else
     numerics_printf("GenericMechanical_driver compute_error END:, err<tol: error : %e\n", *err);
 #endif
-  if(storageType == 0)
+  if(storageType == NM_DENSE)
     free(bufForLocalProblemDense);
 
   if(*err > tol)
@@ -235,7 +250,7 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
   SScmp++;
 #endif
   listNumericsProblem * curProblem = 0;
-  int storageType = pGMP->M->storageType;
+  NM_types storageType = pGMP->M->storageType;
   NumericsMatrix* numMat = pGMP->M;
   int iterMax = options->iparam[SICONOS_IPARAM_MAX_ITER];
   int it = 0;
@@ -256,7 +271,7 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
   double * pBuffVelocity = NULL;
   int withLS = options->iparam[SICONOS_GENERIC_MECHANICAL_IPARAM_WITH_LINESEARCH];
   double * pCoefLS = &(options->dparam[SICONOS_DPARAM_GMP_COEFF_LS]);
-  double * bufForLocalProblemDense = (storageType == 0) ? (double*) malloc(pGMP->maxLocalSize * pGMP->maxLocalSize * sizeof(double)) : 0;
+  double * bufForLocalProblemDense = (storageType == NM_DENSE) ? (double*) malloc(pGMP->maxLocalSize * pGMP->maxLocalSize * sizeof(double)) : 0;
 
   if(options->dWork)
   {
@@ -297,7 +312,7 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
       //diagBlockNumber = NM_extract_diag_blockPos(m,currentRowNumber);
       //diagBlockNumber = NM_extract_diag_blockPos(numMat,currentRowNumber,posInX,size);
       double * diagBlock = 0;
-      if(storageType == 0)  /*dense*/
+      if(storageType == NM_DENSE)  /*dense*/
       {
         NM_extract_diag_block(numMat, currentRowNumber, posInX, curSize, &bufForLocalProblemDense);
         diagBlock = bufForLocalProblemDense;
@@ -364,17 +379,50 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
         fcProblem->M->matrix0 = diagBlock;
         memcpy(curProblem->q, &(pGMP->q[posInX]), curSize * sizeof(double));
 
-        DEBUG_EXPR_WE(NV_display(curProblem->q,3);
-
-
-                      for(int i =0 ; i < 3; i++) numerics_printf("curProblem->q[%i]= %12.8e,\t fcProblem->q[%i]= %12.8e,\n",i,curProblem->q[i],i,fcProblem->q[i]););
+        DEBUG_EXPR_WE(
+          NV_display(curProblem->q,3);
+          for(int i =0 ; i < 3; i++)
+            numerics_printf("curProblem->q[%i]= %12.8e,\t fcProblem->q[%i]= %12.8e,\n",i,curProblem->q[i],i,fcProblem->q[i]);
+          );
 
         NM_row_prod_no_diag(pGMP->size, curSize, currentRowNumber, posInX, numMat, reaction, fcProblem->q, NULL, 0);
 
-        DEBUG_EXPR_WE(for(int i =0 ; i < 3; i++)  numerics_printf("reaction[%i]= %12.8e,\t fcProblem->q[%i]= %12.8e,\n",i,reaction[i],i,fcProblem->q[i]););
+        DEBUG_EXPR_WE(
+          for(int i =0 ; i < 3; i++)
+            numerics_printf("reaction[%i]= %12.8e,\t fcProblem->q[%i]= %12.8e,\n",
+                            i,reaction[i],i,fcProblem->q[i]);
+          );
 
         /* We call the generic driver (rather than the specific) since we may choose between various local solvers */
         resLocalSolver = fc3d_driver(fcProblem, sol, w, options->internalSolvers[1]);
+        //resLocalSolver=fc3d_unitary_enumerative_solve(fcProblem,sol,&options->internalSolvers[1]);
+        break;
+      }
+      case SICONOS_NUMERICS_PROBLEM_FC2D:
+      {
+        numerics_printf_verbose(1, "solve SICONOS_NUMERICS_PROBLEM_FC2D");
+        FrictionContactProblem * fcProblem = (FrictionContactProblem *)curProblem->problem;
+        assert(fcProblem);
+        assert(fcProblem->M);
+        assert(fcProblem->q);
+        fcProblem->M->matrix0 = diagBlock;
+        memcpy(curProblem->q, &(pGMP->q[posInX]), curSize * sizeof(double));
+
+        DEBUG_EXPR_WE(
+          NV_display(curProblem->q,2);
+          for(int i =0 ; i < 2; i++)
+            numerics_printf("curProblem->q[%i]= %12.8e,\t fcProblem->q[%i]= %12.8e,\n",i,curProblem->q[i],i,fcProblem->q[i]);
+          );
+
+        NM_row_prod_no_diag(pGMP->size, curSize, currentRowNumber, posInX, numMat, reaction, fcProblem->q, NULL, 0);
+
+        DEBUG_EXPR_WE(
+          for(int i =0 ; i < 2; i++)
+            numerics_printf("reaction[%i]= %12.8e,\t fcProblem->q[%i]= %12.8e,\n",i,reaction[i],i,fcProblem->q[i]);
+          );
+
+        /* We call the generic driver (rather than the specific) since we may choose between various local solvers */
+        resLocalSolver = fc2d_driver(fcProblem, sol, w, options->internalSolvers[3]);
         //resLocalSolver=fc3d_unitary_enumerative_solve(fcProblem,sol,&options->internalSolvers[1]);
         break;
       }
@@ -423,9 +471,6 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
         *pCoefLS = 1.0;
         memcpy(velocity, pBuffVelocity, pGMP->size * sizeof(double));
       }
-
-
-
     }
     else
     {
@@ -464,7 +509,7 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
     fclose(toto);
 #endif
 
-    //    if (storageType==0)
+    //    if (storageType==NM_DENSE)
     //      free(bufForLocalProblemDense);
     //    exit(0);
   }
@@ -494,7 +539,7 @@ void gmp_gauss_seidel(GenericMechanicalProblem* pGMP, double * reaction, double 
   if(! options->dWork)
     free(pPrevReaction);
   *info = tolViolate;
-  if(storageType == 0)
+  if(storageType == NM_DENSE)
     free(bufForLocalProblemDense);
   DEBUG_END("gmp_gauss_seidel(...)\n");
 }
@@ -574,6 +619,7 @@ void gmp_set_default(SolverOptions* options)
   options->internalSolvers[0] = solver_options_create(SICONOS_LCP_LEMKE);
   options->internalSolvers[1] = solver_options_create(SICONOS_FRICTION_3D_ONECONTACT_QUARTIC);
   options->internalSolvers[2] = solver_options_create(SICONOS_RELAY_LEMKE);
+  options->internalSolvers[3] = solver_options_create(SICONOS_FRICTION_2D_NSGS);
 
   /* switch (id) */
   /*   { */

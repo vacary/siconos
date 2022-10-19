@@ -110,23 +110,6 @@ function(configure_component_documentation COMPONENT)
   include(doc_tools)
   # --- doxygen warnings ---
   include(doxygen_warnings)
-
-  # --- documentation ---
-  if(WITH_DOCUMENTATION OR WITH_DOXY2SWIG)
-    # Update list of source directories to be taken
-    # into account by doxygen for the current component
-    # --> set CACHE var ${COMPONENT}_DOXYGEN_INPUTS
-    # Required by doxy2swig_docstrings and doxy2rst_sphinx.
-    update_doxygen_inputs(${COMPONENT})
-  endif()
-  
-  # xml files for python docstrings ...
-  # xml files are required to build docstrings target
-  # and so they must be built during cmake run.
-  if(WITH_PYTHON_WRAPPER)
-    include(doxy2swig_docstrings)
-    doxy2swig_docstrings(${COMPONENT})
-  endif()
   
   # update the main doxy file, without building the doc
   if(WITH_${COMPONENT}_DOCUMENTATION  OR WITH_SERIALIZATION)
@@ -166,13 +149,8 @@ function(siconos_component_install_setup COMPONENT)
   # Setup the list of all headers to be installed.
   foreach(dir IN LISTS ${COMPONENT}_INSTALL_INTERFACE_INCLUDE_DIRECTORIES)
 
-    if(${CMAKE_VERSION} VERSION_GREATER "3.12.0")
-      file(GLOB _headers CONFIGURE_DEPENDS
-        LIST_DIRECTORIES false ${_FILE} ${dir}/*.h ${dir}/*.hpp)
-    else()
-      file(GLOB _headers
-        LIST_DIRECTORIES false ${_FILE} ${_FILE} ${dir}/*.h ${dir}/*.hpp)
-    endif()
+    file(GLOB _headers CONFIGURE_DEPENDS
+      LIST_DIRECTORIES false ${_FILE} ${dir}/*.h ${dir}/*.hpp)
     list(APPEND _all_headers ${_headers})
     
     # And each include path in install interface must obviously be installed ...

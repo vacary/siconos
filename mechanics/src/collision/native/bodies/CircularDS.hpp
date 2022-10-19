@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@
 /** \file CircularDS.hpp
  */
 
-/** \class CircularDS
-    \brief Definition of a 2D circular shape - Inherits from LagrangianDS
+/**
+   Definition of a 2D circular shape - Inherits from LagrangianDS
 */
 
 
@@ -33,8 +33,6 @@
 class CircularDS : public LagrangianDS
 {
 protected:
-  /** serialization hooks
-  */
   ACCEPT_SERIALIZATION(CircularDS);
 
   double radius;

@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -477,8 +477,7 @@ void BlockVectorTest::testInsert()
   xB->insertPtr(y);
   CPPUNIT_ASSERT_EQUAL_MESSAGE("testInsert : ", xB->numberOfBlocks() == 3, true);
   CPPUNIT_ASSERT_EQUAL_MESSAGE("testInsert : ", xB->size() == (7 + size), true);
-  CPPUNIT_ASSERT_EQUAL_MESSAGE("testInsert : ", xB->vector(2) != y, true);
-  CPPUNIT_ASSERT_EQUAL_MESSAGE("testInsert : ", *xB->vector(2) == *y, true);
+  CPPUNIT_ASSERT_EQUAL_MESSAGE("testInsert : ", xB->vector(2) == y, true);
 
   xB->insertPtr(y);
   CPPUNIT_ASSERT_EQUAL_MESSAGE("testInsert : ", xB->numberOfBlocks() == 4, true);

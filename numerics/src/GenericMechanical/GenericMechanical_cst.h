@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ enum GENERIC_MECHANICAL_SOLVER
   SICONOS_GENERIC_MECHANICAL_NSGS = 2000
 };
 
-/** \enum iparam indices for generic mechanical solvers*/
+/** \enum GENERIC_MECHANICAL_IPARAM indices for generic mechanical solvers*/
 enum GENERIC_MECHANICAL_IPARAM
   {
    SICONOS_GENERIC_MECHANICAL_IPARAM_ISREDUCED = 2,
@@ -45,7 +45,7 @@ enum GENERIC_MECHANICAL_DPARAM
    SICONOS_DPARAM_GMP_COEFF_LS = 19,
   };
 
-/**\enum Possible values for iparam[GENERIC_MECHANICAL_IPARAM_ISREDUCED]  */
+/**\enum GENERIC_MECHANICAL_ISREDUCED Possible values for iparam[GENERIC_MECHANICAL_IPARAM_ISREDUCED]  */
 enum GENERIC_MECHANICAL_ISREDUCED
   {
    SICONOS_GENERIC_MECHANICAL_GS_ON_ALLBLOCKS = 0, // GS on all blocks

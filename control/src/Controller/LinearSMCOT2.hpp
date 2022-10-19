@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 /*! \file LinearSMCOT2.hpp
   \brief General interface to define a sliding mode controller with
-  disturbance compensation. Reference: Su, W.C.; Drakunov, S.; Özgüner, Ü.
+  disturbance compensation. Reference: Su, W.C.; Drakunov, S.; Ozguner, U.
   An O(T2) boundary layer in sliding mode for sampled-data systems
   */
 
@@ -62,14 +62,13 @@ private:
   /** Coefficient*/
   double _coeff;
 
-  /** serialization hooks
-  */
   ACCEPT_SERIALIZATION(LinearSMCOT2);
 
 public:
 
   /** Constructor
-   * \param sensor the ControlSensor feeding the Actuator
+   *
+   *  \param sensor the ControlSensor feeding the Actuator
    */
   LinearSMCOT2(SP::ControlSensor sensor);
 
@@ -78,20 +77,22 @@ public:
   virtual ~LinearSMCOT2();
 
   /** initialize actuator data.
-   * \param nsds current nonsmooth dynamical system
-   * \param s current simulation setup
-  */
+   *
+   *  \param nsds current nonsmooth dynamical system
+   *  \param s current simulation setup
+   */
   void initialize(const NonSmoothDynamicalSystem& nsds, const Simulation & s);
 
   /** Compute the new control law at each event
-   * Here we are using the following formula:
-   * TODO
+   *  Here we are using the following formula:
+   *  TODO
    */
   void actuate();
 
-    /** This is derived in child classes if they need to copy the TimeDiscretisation
-   * associated with this Sensor
-  *  \param td the TimeDiscretisation for this Sensor
+  /** This is derived in child classes if they need to copy the TimeDiscretisation
+   *  associated with this Sensor
+   *   
+   *  \param td the TimeDiscretisation for this Sensor
   */
   virtual void setTimeDiscretisation(const TimeDiscretisation& td);
 

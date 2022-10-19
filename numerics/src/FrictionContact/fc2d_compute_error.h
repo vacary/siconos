@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,8 @@
 extern "C"
 {
 #endif
-
+  
+  void fc2d_unitary_compute_and_add_error(double* restrict r, double* restrict u, double mu, double* restrict error, double * worktmp);
   /** Error computation for friction-contact 3D problem
       \param problem the structure which defines the friction-contact problem
       \param z vector

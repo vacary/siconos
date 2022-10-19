@@ -1,5 +1,7 @@
 FROM opensuse/leap:15.0
 
+WORKDIR /home
+COPY ci_gitlab/dockerfiles/requirements.txt /home
 RUN zypper install -n -y \
     cmake \
     which \
@@ -21,11 +23,6 @@ RUN zypper install -n -y \
     hdf5-devel \
     doxygen \
     suitesparse-devel \
-    valgrind
-RUN zypper clean --all
-WORKDIR /home
-RUN pip3 install --upgrade pip
-COPY requirements.txt /home
-RUN pip3 install -U -r /home/requirements.txt > /dev/null
+    valgrind && zypper clean --all && pip3 install --upgrade pip && pip3 install -U -r /home/requirements.txt > /dev/null
 
 

@@ -229,7 +229,7 @@ BounceResult bounceTest(std::string moving,
   osnspb->numericsSolverOptions()->dparam[SICONOS_DPARAM_TOL] = 1e-5;
 
   osnspb->setMaxSize(16384);
-  osnspb->setMStorageType(1);
+  osnspb->setMStorageType(NM_SPARSE_BLOCK);
   osnspb->setNumericsVerboseMode(0);
   osnspb->setKeepLambdaAndYState(true);
 
@@ -249,7 +249,7 @@ BounceResult bounceTest(std::string moving,
   simulation->insertInteractionManager(collisionMan);
 
   // Add static shapes (centered at zero by default)
-  collisionMan->insertStaticContactorSet(static_contactors);
+  collisionMan->addStaticBody(static_contactors);
 
   // Add a non-smooth law
   SP::NonSmoothLaw nslaw(new NewtonImpactFrictionNSL(0.8, 0., 0.0, 3));

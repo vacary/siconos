@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 /* #define DEBUG_NOCOLOR */
 /* #define DEBUG_STDOUT */
 /* #define DEBUG_MESSAGES */
-#include "debug.h"                   // for DEBUG_PRINTF, DEBUG_EXPR, DEBUG_...
+#include "siconos_debug.h"                   // for DEBUG_PRINTF, DEBUG_EXPR, DEBUG_...
 #include "numerics_verbose.h"        // for numerics_error
 #include "projectionOnCone.h"        // for projectionOnCone
 #include "projectionOnCylinder.h"    // for projectionOnCylinder
@@ -53,8 +53,8 @@ void fc3d_unitary_compute_and_add_error(double* restrict r, double* restrict u, 
   worktmp[1] = r[1] -  worktmp[1];
   worktmp[2] = r[2] -  worktmp[2];
   *error +=  worktmp[0] * worktmp[0] + worktmp[1] * worktmp[1] + worktmp[2] * worktmp[2];
-
 }
+
 int fc3d_compute_error(
   FrictionContactProblem* problem,
   double *z, double *w, double tolerance,

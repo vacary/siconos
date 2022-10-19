@@ -1,7 +1,6 @@
 // signatures
-// docstrings are generated from doxygen thanks to an external tool
-// (doxy2swig.py)
-//%feature("autodoc", 0);
+// docstrings are generated from doxygen using swig option -doxygen.
+// Do not use %feature("autodoc", 3) !!
 
 // named parameters (broken with overloaded function)
 // %feature("kwargs");
@@ -10,19 +9,14 @@
 
 // to avoid name conflicts
 %{
+// Numpy stuff - https://numpy.org/doc/stable/reference/swig.interface-file.html
 #define SWIG_FILE_WITH_INIT
 
 #ifdef __cplusplus
 extern "C"
 #endif
-
-SWIGEXPORT
-#if PY_VERSION_HEX >= 0x03000000
-PyObject*
-#else
-void
-#endif
-SWIG_init(void);
+SWIGEXPORT PyObject* SWIG_init(void);
+ 
 
 #ifdef __cplusplus
 #include <sstream>
@@ -41,26 +35,10 @@ SWIG_init(void);
 
 #include <assert.h>
 //#define DEBUG_MESSAGES 1
-#include <debug.h>
+#include "siconos_debug.h"
 #include "SiconosConfig.h"
 #include "numerics_verbose.h"
 
-#if PY_VERSION_HEX < 0x02070000
-#ifndef PyBytes_Check
-#define PyBytes_Check PyString_Check
-#define PyBytes_Size PyString_Size
-#define PyBytes_AsString PyString_AsString
-#define PyBytes_AS_STRING PyString_AS_STRING
-#define PyBytes_GET_SIZE PyString_GET_SIZE
-#endif
-
-#ifndef PyCapsule_New
-#define PyCapsule_New PyCObject_FromVoidPtrAndDesc
-#define PyCapsule_CheckExact PyCObject_Check
-#define PyCapsule_GetPointer(o, n) PyCObject_GetDesc((o))
-#endif
-
-#endif
 %}
 
 %include "SiconosConfig.h"
@@ -95,6 +73,10 @@ SWIG_init(void);
 
 %include ignored_functions.i
 
+ // swig / STL. http://www.swig.org/Doc4.0/Library.html#Library_stl_cpp_library
 %include stl.i
+
+%feature("doxygen:alias:rst") "\verbatim embed:rst"
+%feature("doxygen:alias:endrst") "\endverbatim"
 
 #endif

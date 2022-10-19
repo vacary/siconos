@@ -117,15 +117,15 @@ public:
 
 
   // OTHER FUNCTIONS
-  SP::SiconosVector initializeInternalVariables(Interaction &);
+  SP::SiconosVector initializeInternalVariables(Interaction &) override;
   
-  void updateInternalVariables(Interaction & inter);
+  void updateInternalVariables(Interaction & inter) override;
   
   /** Ask if the Nslaw is active at a given level
   */
-  virtual bool isActiveAtLevel(Interaction& inter,  unsigned int level);
+  virtual bool isActiveAtLevel(Interaction& inter,  unsigned int level) override;
 
-  double * r_cohesion(Interaction& inter) const;
+  double * r_cohesion(Interaction& inter) const override;
 
   /** getter of beta
    * \return the value of beta
@@ -134,7 +134,7 @@ public:
  
   /** print the data to the screen
    */
-  void display() const;
+  void display() const override;
 
   /** Visitors hook
    */

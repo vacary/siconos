@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,7 @@
 class Circle : public CircularDS, public std::enable_shared_from_this<Circle>
 {
 private:
-  /** serialization hooks
-  */
+
   ACCEPT_SERIALIZATION(Circle);
 
 
@@ -46,19 +45,19 @@ protected:
 public:
 
   /** Constructor
-      \param radius
-      \param mass
-      \param position vector
-      \param velocity vector
-  */
-
+   *
+   *  \param radius
+   *  \param mass
+   *  \param position vector
+   *  \param velocity vector
+   */
+  
   Circle(double radius, double mass, SP::SiconosVector position, SP::SiconosVector velocity);
 
   /** destructor
    */
   virtual ~Circle();
 
-  /** visitors hook */
   ACCEPT_BASE_SP_VISITORS(LagrangianDS);
 
 };

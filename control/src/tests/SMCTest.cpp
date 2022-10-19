@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -158,9 +158,8 @@ void SMCTest::test_eSMC_Lsodar()
   simLsodar->run();
   SimpleMatrix& data = *simLsodar->data();
   ioMatrix::write("eSMC_Lsodar.dat", "ascii", data, "noDim");
-  double error =0.0;
-  bool test = !((error=ioMatrix::compareRefFile(data, "eSMC.ref", _tol)) >= 0.0
-                && error > _tol);
+  auto error = ioMatrix::compareRefFile(data, "eSMC.ref", _tol);
+  bool test = !(error >= 0.0 && error > _tol);
   std::cout << "------- Integration done -------" << test <<std::endl;
   CPPUNIT_ASSERT_EQUAL_MESSAGE("test_Luenberger_ZOH : ", test, true);
 }

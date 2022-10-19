@@ -2,7 +2,7 @@
 // Siconos is a program dedicated to modeling, simulation and control
 // of non smooth dynamical systems.
 //
-// Copyright 2020 INRIA.
+// Copyright 2022 INRIA.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -71,14 +71,5 @@ extern "C"
   }
 %enddef
 
-%typemap(in) (int number_of_guesses,  fclib_solution *guesses) (struct fclib_solution* temp) {
-
-  temp = NULL;
-  temp = (fclib_solution *) malloc(sizeof(fclib_solution)*PyObject_Length($input));
-  convert_fcsol_array($input,temp);
-
-  $1 = PyObject_Length($input);
-  $2 = &temp[0];
- }
 
 %include fclib.h

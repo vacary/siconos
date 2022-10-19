@@ -43,4 +43,4 @@ RUN apt install -y -qq \
         python3-sphinx-rtd-theme \
         python3-sphinx-bootstrap-theme
 
-RUN apt clean && apt autoremove
+RUN apt clean && apt autoremove && rm -rf /var/lib/apt/lists/*

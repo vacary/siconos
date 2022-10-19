@@ -28,7 +28,7 @@
 #define DEBUG_NOCOLOR
 #define DEBUG_STDOUT
 #define DEBUG_MESSAGES
-#include "debug.h"
+#include "siconos_debug.h"
 
 using namespace RELATION;
 
@@ -146,7 +146,8 @@ void CohesiveFrictionContact::computeq(double time)
 
 
   DEBUG_EXPR(_q_cohesion->display(););
-  DEBUG_EXPR("before"; _q->display(););
+  DEBUG_PRINT("before");
+  DEBUG_EXPR(_q->display(););
   NM_gemv(1.0,
           NM,
           &*_q_cohesion->getArray(),
@@ -243,4 +244,26 @@ void CohesiveFrictionContact::postCompute()
   }
 
   DEBUG_END("void CohesiveFrictionContact::postCompute()\n");
+}
+bool CohesiveFrictionContact::checkCompatibleNSLaw(NonSmoothLaw& nslaw)
+{
+
+  float type_number= (float) (Type::value(nslaw) + 0.1 * nslaw.size());
+  _nslawtype.insert(type_number);
+
+  if (Type::value(nslaw) != Type::CohesiveZoneModelNIFNSL)
+  {
+    THROW_EXCEPTION("\nCohesiveFrictionContact::checkCompatibleNSLaw -  \n\
+                      The chosen nonsmooth law is not compatible with FrictionalContact one step nonsmooth problem. \n\
+                      Compatible NonSmoothLaw are: CohesiveZoneModelNIFNSL (2D or 3D) \n");
+    return false;
+  }
+  if (_nslawtype.size() > 1)
+  {
+    THROW_EXCEPTION("\nCohesiveFrictionContact::checkCompatibleNSLaw -  \n\
+                     Compatible NonSmoothLaw are: CohesiveZoneModelNIFNSL (2D or 3D), but you cannot mix them \n");
+    return false;
+  }
+
+  return true;
 }

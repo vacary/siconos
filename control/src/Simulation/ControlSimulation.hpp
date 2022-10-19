@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2020 INRIA.
+ * Copyright 2022 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@
 class ControlSimulation
 {
 private:
-  /** serialization hooks */
+  
   ACCEPT_SERIALIZATION(ControlSimulation);
 
 protected:
@@ -42,7 +42,7 @@ protected:
   ControlSimulation() {};
 
   /** Constructor with the minimal set of data
-   * \param t0 the starting time \f$t_0\f$
+   * \param t0 the starting time \f$ t_0 \f$
    * \param T the end time T
    * \param h the simulation time step
    * */
