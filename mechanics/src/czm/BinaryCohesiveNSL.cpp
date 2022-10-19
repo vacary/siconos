@@ -20,9 +20,9 @@
 
 #include <iostream>
 
-#define DEBUG_NOCOLOR
-#define DEBUG_STDOUT
-#define DEBUG_MESSAGES
+// #define DEBUG_NOCOLOR
+// #define DEBUG_STDOUT
+// #define DEBUG_MESSAGES
 //#define DEBUG_BEGIN_END_ONLY
 //#define DEBUG_WHERE_MESSAGES
 #include <siconos_debug.h>
@@ -64,7 +64,7 @@ void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)
   DEBUG_BEGIN("void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)\n");
   /*  update beta */
 
-  double normal_gap = (*(inter.y(0)))(0); // this rule has to be improved following the model of Tveergard.
+  double delta = (*(inter.y(0)))(0); // this rule has to be improved following the model of Tveergard.
 
   double * beta = &(inter.internalVariables()->getArray()[0]);
   double * beta_k = &(inter.internalVariables_k()->getArray()[0]);
@@ -74,14 +74,14 @@ void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)
   // std::cout << this << std::endl;
   DEBUG_PRINTF("beta = %e\n", *beta);
   DEBUG_PRINTF("beta_k = %e\n", *beta_k);
-  DEBUG_PRINTF("normal_gap = %e\n", normal_gap);
+  DEBUG_PRINTF("delta = %e\n", delta);
 
-  if ((normal_gap > _delta_c))
+  if ((delta > _delta_c))
   {
     DEBUG_PRINT("the interface is broken\n");
     *beta=0.0;
   }
-  else if ((normal_gap <= _delta_c) and (*beta_k == 1.0))
+  else if ((delta <= _delta_c) and (*beta_k == 1.0))
   {
     DEBUG_PRINT("the interface is sane\n");
     *beta=1.0;
