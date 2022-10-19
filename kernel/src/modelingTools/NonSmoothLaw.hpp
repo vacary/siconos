@@ -98,7 +98,7 @@ public:
 
   /** Ask if the Nslaw is active at a given level
   */
-  virtual bool isActiveAtLevel(Interaction & inter, unsigned int level) { return true;}
+  virtual bool isActiveAtLevel(Interaction & inter, unsigned int level) { return false;}
 
   /** \return the size of the NS law */
   inline unsigned int size() const { return _size; }
