@@ -25,9 +25,9 @@
 #include "OSNSMatrix.hpp"
 #include "NumericsMatrix.h"
 
-#define DEBUG_NOCOLOR
-#define DEBUG_STDOUT
-#define DEBUG_MESSAGES
+// #define DEBUG_NOCOLOR
+// #define DEBUG_STDOUT
+// #define DEBUG_MESSAGES
 #include "siconos_debug.h"
 
 using namespace RELATION;
@@ -251,17 +251,13 @@ bool CohesiveFrictionContact::checkCompatibleNSLaw(NonSmoothLaw& nslaw)
   float type_number= (float) (Type::value(nslaw) + 0.1 * nslaw.size());
   _nslawtype.insert(type_number);
 
-  if (Type::value(nslaw) != Type::CohesiveZoneModelNIFNSL)
+  if (not (Type::value(nslaw) == Type::CohesiveZoneModelNIFNSL ||
+	   Type::value(nslaw) == Type::NewtonImpactFrictionNSL  ))
+	  
   {
     THROW_EXCEPTION("\nCohesiveFrictionContact::checkCompatibleNSLaw -  \n\
-                      The chosen nonsmooth law is not compatible with FrictionalContact one step nonsmooth problem. \n\
+                      The chosen nonsmooth law is not compatible with CohesiveFrictionalContact one step nonsmooth problem. \n\
                       Compatible NonSmoothLaw are: CohesiveZoneModelNIFNSL (2D or 3D) \n");
-    return false;
-  }
-  if (_nslawtype.size() > 1)
-  {
-    THROW_EXCEPTION("\nCohesiveFrictionContact::checkCompatibleNSLaw -  \n\
-                     Compatible NonSmoothLaw are: CohesiveZoneModelNIFNSL (2D or 3D), but you cannot mix them \n");
     return false;
   }
 
