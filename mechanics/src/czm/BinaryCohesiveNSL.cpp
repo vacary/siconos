@@ -19,7 +19,7 @@
 #include "Interaction.hpp"
 
 #include <iostream>
-
+#include <algorithm>
 // #define DEBUG_NOCOLOR
 // #define DEBUG_STDOUT
 // #define DEBUG_MESSAGES
@@ -40,9 +40,24 @@ BinaryCohesiveNSL::BinaryCohesiveNSL(double en, double et, double mu,
                                      double sigma_c, double delta_c,
                                      unsigned int size):
   CohesiveZoneModelNIFNSL(en, et, mu, size),
-  _sigma_c(sigma_c), _surface(1.0),
-  _delta_c(delta_c)
+  _sigma_c(sigma_c),
+  _delta_c(delta_c),
+  _shape_type(DOOR_SHAPE)
 {}
+
+BinaryCohesiveNSL::BinaryCohesiveNSL(double en, double et, double mu,
+                                     double sigma_c, double delta_c,
+                                     unsigned int size,
+				     shape_type_t shape_type):
+  CohesiveZoneModelNIFNSL(en, et, mu, size),
+  _sigma_c(sigma_c),
+  _delta_c(delta_c),
+  _shape_type(shape_type)
+{
+	if (_shape_type == TRIANGLE_SHAPE){
+		_slope = - 1.0/_delta_c;
+	}
+}
 
 
 
@@ -53,9 +68,11 @@ SP::SiconosVector BinaryCohesiveNSL::initializeInternalVariables(Interaction& in
 {
   /* internalVariables(0) --> beta */
   /* internalVariables(1:nslawsize) --> r_cohesion */
+  /* internalVariables(nslawsize+1) --> surface od the cohesive element*/	
   /* Cumulative normal and tangent displacement must be also added */
-  SP::SiconosVector internalVariables(new SiconosVector(1+_size));
+  SP::SiconosVector internalVariables(new SiconosVector(1+_size+1));
   internalVariables->setValue(0,1.0); // initial value of beta. This has to be fixed correctly
+  internalVariables->setValue(1+_size,1.0); // initial value of surface. This has to be fixed correctly
   return internalVariables;
 
 }
@@ -68,25 +85,31 @@ void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)
 
   double * beta = &(inter.internalVariables()->getArray()[0]);
   double * beta_k = &(inter.internalVariables_k()->getArray()[0]);
-
-
+  double  surface = inter.internalVariables_k()->getArray()[_size+1];
 
   // std::cout << this << std::endl;
   DEBUG_PRINTF("beta = %e\n", *beta);
   DEBUG_PRINTF("beta_k = %e\n", *beta_k);
   DEBUG_PRINTF("delta = %e\n", delta);
 
-  if ((delta > _delta_c))
-  {
-    DEBUG_PRINT("the interface is broken\n");
-    *beta=0.0;
+  if (_shape_type == DOOR_SHAPE)
+    {
+      if ((delta > _delta_c))
+	{
+	  DEBUG_PRINT("the interface is broken\n");
+	  *beta=0.0;
+	}
+      else if ((delta <= _delta_c) and (*beta_k == 1.0))
+	{
+	  DEBUG_PRINT("the interface is sane\n");
+	  *beta=1.0;
+	}
+    }
+  else if (_shape_type == TRIANGLE_SHAPE)
+  {	  
+	  *beta = std::min(*beta_k, 1.0 + _slope * delta);
+	  *beta = std::max(0., *beta);	  
   }
-  else if ((delta <= _delta_c) and (*beta_k == 1.0))
-  {
-    DEBUG_PRINT("the interface is sane\n");
-    *beta=1.0;
-  }
-
   DEBUG_PRINTF("beta = %e\n", *beta);
 
   double * r_cohesion = &(inter.internalVariables()->getArray()[1]);
@@ -95,9 +118,9 @@ void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)
   {
     r_cohesion[k]= 0.0;
   }
-  r_cohesion[0]= - *beta * _sigma_c * _surface;
+  r_cohesion[0]= - *beta * _sigma_c * surface;
   r_cohesion[1]= 0.0;
-  //r_cohesion[1]= - *beta * _sigma_c * _surface; not possible with an extrinsic cohesive law
+  //r_cohesion[1]= - *beta * _sigma_c * surface; not possible with an extrinsic cohesive law
   if (_size > 2)
   {
     r_cohesion[2]= r_cohesion[1];
@@ -145,7 +168,6 @@ void BinaryCohesiveNSL::display() const
   CohesiveZoneModelNIFNSL::display();
   std::cout << "=== BinaryCohesiveNSL data display ===============================" << this << std::endl;
   std::cout << " cohesive resistance to traction: " << _sigma_c <<std::endl;
-  std::cout << " cohesive surface: " << _surface <<std::endl;
   std::cout << " critical displacement: " << _delta_c <<std::endl;
   std::cout << "==================================================================" <<std::endl;
 }

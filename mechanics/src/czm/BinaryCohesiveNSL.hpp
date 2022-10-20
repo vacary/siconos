@@ -34,31 +34,28 @@
 class BinaryCohesiveNSL : public CohesiveZoneModelNIFNSL
 {
 
+public:
+  typedef enum {DOOR_SHAPE,TRIANGLE_SHAPE} shape_type_t;
+  
 private:
   /** serialization hooks
   */
   ACCEPT_SERIALIZATION(BinaryCohesiveNSL);
-
   
   /** cohesive resistance to traction */
   double _sigma_c;
-  
-  /** cohesive surface */
-  double _surface; 
 
   /** critical displacement */
   double _delta_c;
 
+  /** slope for triangle law */
+  double _slope;
+
+  /** shape of the cohesive law */
+  shape_type_t _shape_type;
+	
 protected:
   
-  /** cohesion state */
-  //double _beta; // =0:broken =1:sane
-
-  /** old value of cohesion state
-      this should be stored on the graph by the OSI
-  */
-  //double _beta_k; // =0:broken =1:sane
-
   /** default constructor
    */
   BinaryCohesiveNSL();
@@ -80,6 +77,11 @@ public:
    */
   BinaryCohesiveNSL(double en, double et, double mu, double sigma_c, double delta_c, unsigned int size);
 
+  BinaryCohesiveNSL(double en, double et, double mu,
+		    double sigma_c, double delta_c,
+		    unsigned int size,
+		    shape_type_t shape_type);
+	
   /** Destructor */
   ~BinaryCohesiveNSL();
 
