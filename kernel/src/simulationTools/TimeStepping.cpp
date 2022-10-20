@@ -625,10 +625,10 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep)
 
     if (!_skip_last_updateInput)
       updateOutput();
-
+    
+    updateInteractionInternalState();
     updateInput();
     updateState();
-    updateNonSmoothLaw();
     if (!_skip_last_updateOutput)
       updateOutput();
     hasNSProblems = (!_allNSProblems->empty()) ? true : false;
@@ -670,10 +670,10 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep)
         else
           checkSolverOutput(info, this);
       }
-
+      
+      updateInteractionInternalState();
       updateInput();
       updateState();
-      updateNonSmoothLaw();
 
       // -- VA 01/07/2021
       // The fact that we compute _isNewtonConverge after is a bit curious,

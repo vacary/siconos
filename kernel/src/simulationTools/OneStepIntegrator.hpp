@@ -389,7 +389,7 @@ public:
 
   /** update the state of the nonsmooth law
    */
-  virtual void updateNonSmoothLaw() {};
+  virtual void updateInteractionInternalState() {};
 
   /** update the output of the Interaction attached to this Integrator
    */

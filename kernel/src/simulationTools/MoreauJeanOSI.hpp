@@ -512,7 +512,7 @@ public:
 
   /** update the state of the nonsmooth law
    */
-  virtual void updateNonSmoothLaw() override;
+  virtual void updateInteractionInternalState() override;
 
   /** Displays the data of the MoreauJeanOSI's integrator
    */

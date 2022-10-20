@@ -1906,10 +1906,6 @@ void MoreauJeanOSI::updateState(const unsigned int)
 }
 
 
-
-
-
-
 bool MoreauJeanOSI::addInteractionInIndexSet(SP::Interaction inter, unsigned int i)
 {
   DEBUG_PRINT("addInteractionInIndexSet(SP::Interaction inter, unsigned int i)\n");
@@ -1945,7 +1941,7 @@ bool MoreauJeanOSI::removeInteractionFromIndexSet(SP::Interaction inter, unsigne
   return !(addInteractionInIndexSet(inter, i));
 }
 
-void MoreauJeanOSI::updateNonSmoothLaw()
+void MoreauJeanOSI::updateInteractionInternalState()
 {
   InteractionsGraph& indexSet0 = *simulation()->indexSet(0); /* we work all the nslaw for indexSet0 */
   InteractionsGraph::VIterator ui, uiend;
@@ -1953,9 +1949,12 @@ void MoreauJeanOSI::updateNonSmoothLaw()
   {
     SP::Interaction inter = indexSet0.bundle(*ui);
     // this is a simple update of the interaction based on the current value in the interaction
-    inter->nonSmoothLaw()->updateInternalVariables(*inter);
+    if (inter->internalVariables())
+    {
+      std::cout<< "update internal variables" << std::endl;
+      inter->nonSmoothLaw()->updateInternalVariables(*inter);
+    }
   }
-
 }
 
 void MoreauJeanOSI::display()

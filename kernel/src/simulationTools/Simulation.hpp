@@ -432,7 +432,7 @@ public:
 
   /** update state of each non smooth law
    */
-  virtual void updateNonSmoothLaw();
+  virtual void updateInteractionInternalState();
 
   /** update output
    *
@@ -447,7 +447,7 @@ public:
    *  level is set to 0 by default since in all time-stepping schemes we update all the state
    */
   void update(unsigned int level=0)
-  { updateInput(level); updateState(level); updateOutput(level); updateNonSmoothLaw(); }
+  { updateInput(level); updateState(level); updateOutput(level); updateInteractionInternalState(); }
 
   /** run the simulation, from t0 to T
    *  with default parameters if any particular settings has been done
