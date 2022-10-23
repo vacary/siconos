@@ -65,6 +65,7 @@ MoreauJeanOSI::MoreauJeanOSI(double theta, double gamma):
   _constraintActivationThreshold(0.0),
   _useGammaForRelation(false),
   _explicitNewtonEulerDSOperators(false),
+  _explicitIntegrationofInteractionInternalState(false),
   _isWSymmetricDefinitePositive(false)
 {
   _levelMinForOutput= 0;
