@@ -127,27 +127,27 @@ void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)
   }
   
   assert( *beta <= *beta_k);
-
+ 
   DEBUG_END("void BinaryCohesiveNSL::updateInternalVariables(Interaction& inter)\n");
 }
 bool BinaryCohesiveNSL::isActiveAtLevel(Interaction& inter, unsigned int level)
 {
 
-  double * beta = &(inter.internalVariables()->getArray()[0]);
-  if (level <=1)
-  {
-    if (*beta > 0.0)
-    {
-      return true; // when the interface is cohesive, we force the activation of the constraint at the veloicity level
-    }
-    else
-    {
-      return false;
-    }
-  }
-  else
-    THROW_EXCEPTION("BinaryCohesiveNSL::isActiveAtLevel(unsigned int level): level should be less than 1");
-
+  // double * beta = &(inter.internalVariables()->getArray()[0]);
+  // if (level <=1)
+  // {
+  //   if (*beta > 0.0)
+  //   {
+  //     return true; // when the interface is cohesive, we force the activation of the constraint at the veloicity level
+  //   }
+  //   else
+  //   {
+  //     return false;
+  //   }
+  // }
+  // else
+  //   THROW_EXCEPTION("BinaryCohesiveNSL::isActiveAtLevel(unsigned int level): level should be less than 1");
+  return false;
 }
 
 double * BinaryCohesiveNSL::r_cohesion(Interaction& inter) const

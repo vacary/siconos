@@ -25,9 +25,9 @@
 #include "OSNSMatrix.hpp"
 #include "NumericsMatrix.h"
 
-// #define DEBUG_NOCOLOR
-// #define DEBUG_STDOUT
-// #define DEBUG_MESSAGES
+#define DEBUG_NOCOLOR
+#define DEBUG_STDOUT
+#define DEBUG_MESSAGES
 #include "siconos_debug.h"
 
 using namespace RELATION;
@@ -127,6 +127,9 @@ void CohesiveFrictionContact::computeq(double time)
   // === Loop through "active" Interactions (ie present in
   // indexSets[level]) ===
 
+  DEBUG_PRINTF("indexSetLevel() = %i\t", indexSetLevel());
+  DEBUG_PRINTF("_sizeOutput = %i \n", _sizeOutput);
+  
   unsigned int pos = 0;
   InteractionsGraph::VIterator ui, uiend;
   if(_q_cohesion->size() != _sizeOutput)
@@ -204,8 +207,6 @@ void CohesiveFrictionContact::postCompute()
   // indexSet(leveMin) are concerned.
 
   //DEBUG_EXPR(display());
-
-  *_z = *_z + *_q_cohesion;
 
   DEBUG_EXPR(_w->display(););
   DEBUG_EXPR(_z->display(););

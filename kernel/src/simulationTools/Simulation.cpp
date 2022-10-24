@@ -408,7 +408,8 @@ void Simulation::initialize()
 
   // 5 - updateOutput
   updateOutput();
-
+  updateInteractionInternalState();
+  
   // 6 - Initialize OneStepNSProblem(s)
   DEBUG_PRINT("Initialize OneStepNSProblem(s)\n");
 

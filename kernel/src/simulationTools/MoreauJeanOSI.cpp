@@ -66,6 +66,7 @@ MoreauJeanOSI::MoreauJeanOSI(double theta, double gamma):
   _useGammaForRelation(false),
   _explicitNewtonEulerDSOperators(false),
   _explicitIntegrationofInteractionInternalState(false),
+  _hasInputInIndexSet0(false),
   _isWSymmetricDefinitePositive(false)
 {
   _levelMinForOutput= 0;
@@ -209,6 +210,7 @@ void MoreauJeanOSI::initializeWorkVectorsForInteraction(Interaction &inter,
   {
     if(!inter_work[MoreauJeanOSI::OSNSP_RHS_COHESION])
       inter_work[MoreauJeanOSI::OSNSP_RHS_COHESION].reset(new SiconosVector(inter.dimension()));
+    _hasInputInIndexSet0 = true;
   }
   // Check if interations levels (i.e. y and lambda sizes) are compliant with the current osi.
   _check_and_update_interaction_levels(inter);
@@ -449,7 +451,7 @@ void MoreauJeanOSI::_computeWBoundaryConditions(SecondOrderDS& ds,
   // When this function is called, WBoundaryConditionsMap[ds] is
   // supposed to exist and not to be null Memory allocation has been
   // done during initializeIterationMatrixWBoundaryConditions.
-  
+
   Type::Siconos dsType = Type::value(ds);
   if(dsType == Type::LagrangianLinearTIDS || dsType == Type::LagrangianDS ||  dsType == Type::NewtonEulerDS || dsType == Type::LagrangianLinearDiagonalDS)
   {
@@ -1367,7 +1369,7 @@ void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const RelayNSL& nslaw)
 void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const NewtonImpactFrictionNSL& nslaw)
 {
   SiconosVector & osnsp_rhs = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS];
-  
+
   // The normal part is multiplied depends on en
   if(nslaw.en() > 0.0)
   {
@@ -1427,6 +1429,7 @@ void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const CohesiveZoneModelNIFNSL&
       DEBUG_PRINTF("r_cohesion [%i] = %e", k, r_cohesion[k]);
       osnsp_rhs_cohesion(k) = _h * r_cohesion[k];
     }
+  std::cout << "MoreauJeanOSI::computeFreeOutput nslaw type cohesive " << std::endl;
 }
 
 void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const EqualityConditionNSL& nslaw)
@@ -1836,8 +1839,8 @@ void MoreauJeanOSI::updateState(const unsigned int)
       SiconosVector& v = *d.twist();
       // DEBUG_PRINT("MoreauJeanOSI::updateState()\n ")
       // DEBUG_EXPR(d.display());
-      DEBUG_PRINT("MoreauJeanOSI::updateState() prev v\n")
-      DEBUG_EXPR(v.display());
+      DEBUG_PRINT("MoreauJeanOSI::updateState() prev v\n");
+      DEBUG_EXPR(v.display(););
 
       // failure on bullet sims
       // d.p(_levelMaxForInput) is checked in next condition
@@ -1929,11 +1932,17 @@ bool MoreauJeanOSI::addInteractionInIndexSet(SP::Interaction inter, unsigned int
   bool criteria = (y <= _constraintActivationThreshold);
 
   criteria = criteria || inter->nonSmoothLaw()->isActiveAtLevel(*inter,i);
-  
+
   DEBUG_EXPR_WE(
     if(criteria)
-      DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet ACTIVATE.\n");
+      {DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet ACTIVATE.\n");
+      }
+    else
+      {DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet DEACTIVATE.\n");
+      }
     );
+
+
   return criteria ;
 }
 
@@ -1945,6 +1954,7 @@ bool MoreauJeanOSI::removeInteractionFromIndexSet(SP::Interaction inter, unsigne
 
 void MoreauJeanOSI::updateInteractionInternalState()
 {
+  DEBUG_BEGIN("MoreauJeanOSI::updateInteractionInternalState()");
   InteractionsGraph& indexSet0 = *simulation()->indexSet(0); /* we work all the nslaw for indexSet0 */
   InteractionsGraph::VIterator ui, uiend;
   for(std::tie(ui, uiend) = indexSet0.vertices(); ui != uiend; ++ui)
@@ -1953,11 +1963,77 @@ void MoreauJeanOSI::updateInteractionInternalState()
     // this is a simple update of the interaction based on the current value in the interaction
     if (inter->internalVariables())
     {
-      std::cout<< "update internal variables" << std::endl;
       inter->nonSmoothLaw()->updateInternalVariables(*inter);
     }
   }
+  DEBUG_END("MoreauJeanOSI::updateInteractionInternalState()");
 }
+
+
+void MoreauJeanOSI::updateInput(double time, unsigned int level)
+{
+  // Warning: This reset may be prone to issue with multiple osis.
+  // resetNonSmoothPart(level);
+  // We compute input using lambda(level).
+  DEBUG_BEGIN("MoreauJeanOSI::updateInput(double time, unsigned int level)\n");
+  DEBUG_PRINTF("level = %i\n", level);
+
+  InteractionsGraph::VIterator ui, uiend;
+  SP::Interaction inter;
+  InteractionsGraph & indexSet0 = *_simulation->nonSmoothDynamicalSystem()->topology()->indexSet0();
+  InteractionsGraph& indexSet = *_simulation->indexSet(level);
+
+  // we first compute p[1] from lambda[1] on indexSet1
+  for(std::tie(ui, uiend) = indexSet.vertices(); ui != uiend; ++ui)
+  {
+    DEBUG_PRINT("MoreauJeanOSI::updateInput. compute p[1] from lambda[1] on indexSet 1 ");
+    if(!checkInteractionOSI(indexSet0, ui)) continue;
+    Interaction & inter = *indexSet.bundle(*ui);
+    assert(inter.lowerLevelForInput() <= level);
+    assert(inter.upperLevelForInput() >= level);
+    inter.computeInput(time, level);
+  }
+
+  // we  compute the additional (cohesive) terms of p[1] on indexSet0
+  // we use lambda(1) temporarily to compute the input since we want to add the term to p[1]
+
+  if (_hasInputInIndexSet0)
+    {
+      double h = _simulation->timeStep();
+      for(std::tie(ui, uiend) = indexSet0.vertices(); ui != uiend; ++ui)
+	{
+	  DEBUG_PRINT("MoreauJeanOSI::updateInput. compute p[1] from lambda[1] on indexSet 0 ");
+
+	  if(!checkInteractionOSI(indexSet0, ui)) continue;
+	  Interaction & inter = *indexSet0.bundle(*ui);
+	  assert(inter.lowerLevelForInput() <= level);
+	  assert(inter.upperLevelForInput() >= level);
+
+	  NonSmoothLaw & nslaw = *inter.nonSmoothLaw();
+	  if (Type::value(nslaw) == Type::CohesiveZoneModelNIFNSL)
+	    {
+	      //std::cout << "MoreauJeanOSI::updateInput nslaw type cohesive " << std::endl;
+	      double * r_cohesion = static_cast<CohesiveZoneModelNIFNSL&>(nslaw).r_cohesion(inter);
+
+	      //printf("r_cohesion = %e\n", r_cohesion[0]);
+	      //printf("y[0][0] before = %e\n",(*inter.y(0))(0));
+	      //printf("lambda[1][0] before = %e\n",(*inter.lambda(1))(0));
+
+	      SP::SiconosVector lambda_1_save (new SiconosVector(*inter.lambda(1)));
+	      for (int k = 0; k <  nslaw.size(); k++)
+		{
+		  (*inter.lambda(1))(k) =  h * r_cohesion[k];
+		}
+	      //printf("lambda[1][0] after = %e\n",(*inter.lambda(1))(0));
+	      inter.computeInput(time, level);
+	      *inter.lambda(1) = * lambda_1_save;
+	    }
+	}
+    }
+
+  DEBUG_END("MoreauJeanOSI::updateInput(double time, unsigned int level)\n");
+};
+
 
 void MoreauJeanOSI::display()
 {

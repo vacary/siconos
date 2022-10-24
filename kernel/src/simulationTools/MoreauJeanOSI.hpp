@@ -152,6 +152,11 @@ protected:
    */
   bool _explicitIntegrationofInteractionInternalState;
 
+  /** a boolean to know if there is an additional input to compute
+   * on the indexSet 0.
+   */
+  bool _hasInputInIndexSet0;
+
   /**
       A set of work indices for the selected coordinates when
       we subprod in computeFreeOuput
@@ -540,6 +545,10 @@ public:
    */
   virtual void updateInteractionInternalState() override;
 
+  /** update the input of the Interaction attached to this Integrator
+   */
+  void updateInput(double time, unsigned int level) override;
+	
   /** Displays the data of the MoreauJeanOSI's integrator
    */
   void display() override;
