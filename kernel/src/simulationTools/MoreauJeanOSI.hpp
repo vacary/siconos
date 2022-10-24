@@ -480,6 +480,13 @@ public:
   void computeFreeOutput(InteractionsGraph::VDescriptor &vertex_inter,
                          OneStepNSProblem *osnsp) override;
 
+  /** return the workVector corresponding to the right hand side of the OneStepNonsmooth problem
+   */
+  SiconosVector& osnsp_rhs(InteractionsGraph::VDescriptor& vertex_inter,   InteractionsGraph& indexSet) override
+  {
+    return *(*indexSet.properties(vertex_inter).workVectors)[MoreauJeanOSI::OSNSP_RHS];
+  };
+
   /** Apply the rule to one Interaction to know if it should be included in the
    *  IndexSet of level i
    *
@@ -527,6 +534,7 @@ public:
    *  \param level the level of interest for the dynamics: not used at the time
    */
   void updateState(const unsigned int level) override;
+
 
   /** update the state of the nonsmooth law
    */
