@@ -47,7 +47,6 @@
 //#define DEBUG_WHERE_MESSAGES
 #include "siconos_debug.h"
 
-
 using namespace RELATION;
 
 /// for non-owned shared pointers (passing const SiconosVector into
@@ -155,7 +154,7 @@ void MoreauJeanOSI::initializeWorkVectorsForDS(double t, SP::DynamicalSystem ds)
   else if(dsType == Type::NewtonEulerDS)
   {
     SP::NewtonEulerDS neds = std::static_pointer_cast<NewtonEulerDS> (ds);
-    DEBUG_PRINTF("neds->number() %i \n",neds->number());
+    DEBUG_PRINTF("neds->number() %zu \n",neds->number());
     //Compute a first value of the dotq  to store it in  _dotqMemory
     SP::SiconosMatrix T = neds->T();
     SP::SiconosVector dotq = neds->dotq();
@@ -219,8 +218,8 @@ void MoreauJeanOSI::initializeWorkVectorsForInteraction(Interaction &inter,
 
   /* allocate and set work vectors for the osi */
   unsigned int xfree = MoreauJeanOSI::xfree;
-  DEBUG_PRINTF("ds1->number() %i\n",ds1->number());
-  DEBUG_PRINTF("ds2->number() %i\n",ds2->number());
+  DEBUG_PRINTF("ds1->number() %zu\n",ds1->number());
+  DEBUG_PRINTF("ds2->number() %zu\n",ds2->number());
 
   if(ds1 != ds2)
   {
@@ -236,7 +235,7 @@ void MoreauJeanOSI::initializeWorkVectorsForInteraction(Interaction &inter,
 
   if(checkOSI(DSG.descriptor(ds1)))
   {
-    DEBUG_PRINTF("ds1->number() %i is taken into account\n", ds1->number());
+    DEBUG_PRINTF("ds1->number() %zu is taken into account\n", ds1->number());
     assert(DSG.properties(DSG.descriptor(ds1)).workVectors);
     VectorOfVectors &workVds1 = *DSG.properties(DSG.descriptor(ds1)).workVectors;
     inter_work_block[xfree]->setVectorPtr(0,workVds1[MoreauJeanOSI::VFREE]);
@@ -247,7 +246,7 @@ void MoreauJeanOSI::initializeWorkVectorsForInteraction(Interaction &inter,
     DEBUG_PRINT("ds1 != ds2\n");
     if(checkOSI(DSG.descriptor(ds2)))
     {
-      DEBUG_PRINTF("ds2->number() %i is taken into account\n",ds2->number());
+      DEBUG_PRINTF("ds2->number() %zu is taken into account\n",ds2->number());
       assert(DSG.properties(DSG.descriptor(ds2)).workVectors);
       VectorOfVectors &workVds2 = *DSG.properties(DSG.descriptor(ds2)).workVectors;
       inter_work_block[xfree]->setVectorPtr(1,workVds2[MoreauJeanOSI::VFREE]);
@@ -1426,10 +1425,9 @@ void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const CohesiveZoneModelNIFNSL&
   double * r_cohesion = nslaw.r_cohesion(_inter);
   for (int k = 0; k <  nslaw.size(); k++)
     {
-      DEBUG_PRINTF("r_cohesion [%i] = %e", k, r_cohesion[k]);
+      DEBUG_PRINTF("r_cohesion [%i] = %e\n", k, r_cohesion[k]);
       osnsp_rhs_cohesion(k) = _h * r_cohesion[k];
     }
-  std::cout << "MoreauJeanOSI::computeFreeOutput nslaw type cohesive " << std::endl;
 }
 
 void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const EqualityConditionNSL& nslaw)
@@ -1954,7 +1952,7 @@ bool MoreauJeanOSI::removeInteractionFromIndexSet(SP::Interaction inter, unsigne
 
 void MoreauJeanOSI::updateInteractionInternalState()
 {
-  DEBUG_BEGIN("MoreauJeanOSI::updateInteractionInternalState()");
+  DEBUG_BEGIN("MoreauJeanOSI::updateInteractionInternalState()\n");
   InteractionsGraph& indexSet0 = *simulation()->indexSet(0); /* we work all the nslaw for indexSet0 */
   InteractionsGraph::VIterator ui, uiend;
   for(std::tie(ui, uiend) = indexSet0.vertices(); ui != uiend; ++ui)
@@ -1966,7 +1964,7 @@ void MoreauJeanOSI::updateInteractionInternalState()
       inter->nonSmoothLaw()->updateInternalVariables(*inter);
     }
   }
-  DEBUG_END("MoreauJeanOSI::updateInteractionInternalState()");
+  DEBUG_END("MoreauJeanOSI::updateInteractionInternalState()\n");
 }
 
 
@@ -1986,7 +1984,7 @@ void MoreauJeanOSI::updateInput(double time, unsigned int level)
   // we first compute p[1] from lambda[1] on indexSet1
   for(std::tie(ui, uiend) = indexSet.vertices(); ui != uiend; ++ui)
   {
-    DEBUG_PRINT("MoreauJeanOSI::updateInput. compute p[1] from lambda[1] on indexSet 1 ");
+    DEBUG_PRINT("MoreauJeanOSI::updateInput. compute p[1] from lambda[1] on indexSet 1 \n");
     if(!checkInteractionOSI(indexSet0, ui)) continue;
     Interaction & inter = *indexSet.bundle(*ui);
     assert(inter.lowerLevelForInput() <= level);
@@ -2002,7 +2000,7 @@ void MoreauJeanOSI::updateInput(double time, unsigned int level)
       double h = _simulation->timeStep();
       for(std::tie(ui, uiend) = indexSet0.vertices(); ui != uiend; ++ui)
 	{
-	  DEBUG_PRINT("MoreauJeanOSI::updateInput. compute p[1] from lambda[1] on indexSet 0 ");
+	  DEBUG_PRINT("MoreauJeanOSI::updateInput. compute p[1] from lambda[1] on indexSet 0\n");
 
 	  if(!checkInteractionOSI(indexSet0, ui)) continue;
 	  Interaction & inter = *indexSet0.bundle(*ui);

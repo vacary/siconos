@@ -101,7 +101,7 @@ public:
   /** compute interactionBlocks if necessary (this depends on the type of
    *  OSNS, on the indexSets ...)
    */
-  void updateInteractionBlocks() override;
+  void updateInteractionBlocks(InteractionsGraph& indexSet) override;
 
   /** compute interactionBlocks if necessary (this depends on the type of
    *  OSNS, on the indexSets ...)

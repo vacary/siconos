@@ -65,8 +65,7 @@ OSNSMatrix::OSNSMatrix(unsigned int n, NM_types stor):
   case NM_SPARSE_BLOCK:
   {
     DEBUG_PRINTF(" _M2 is reset with a matrix of size = %i\n", n);
-    _M2.reset(new BlockCSRMatrix(n));
-    break;
+    _M2.reset(new BlockCSRMatrix(n));    break;
   }
   default:
   {
@@ -154,13 +153,14 @@ unsigned OSNSMatrix::updateSizeAndPositions(InteractionsGraph& indexSet)
   {
     assert(indexSet.descriptor(indexSet.bundle(*vd)) == *vd);
     indexSet.properties(*vd).absolute_position = dim;
+    DEBUG_PRINTF("absolute_position = %i for interaction %zu\n",dim, indexSet.bundle(*vd)->number());
     dim += (indexSet.bundle(*vd)->nonSmoothLaw()->size());
-    DEBUG_PRINTF("Position = %i for interaction %zu\n",dim, indexSet.bundle(*vd)->number());
     assert(indexSet.properties(*vd).absolute_position < dim);
   }
 
   return dim;
 }
+
 unsigned OSNSMatrix::updateSizeAndPositions(DynamicalSystemsGraph & DSG)
 {
   // === Description ===
@@ -251,6 +251,8 @@ void OSNSMatrix::fillM(InteractionsGraph& indexSet, bool update)
       assert(pos < _dimRow);
       assert(col < _dimColumn);
 
+      
+      DEBUG_PRINTF("\n\n OSNSMatrix _M1: pos col %i %i\n", pos, col);
       DEBUG_PRINTF("OSNSMatrix _M1: %i %i\n", _M1->size(0), _M1->size(1));
       DEBUG_PRINTF("OSNSMatrix upper: %i %i\n", indexSet.properties(*ei).upper_block->size(0), indexSet.properties(*ei).upper_block->size(1));
       DEBUG_PRINTF("OSNSMatrix lower: %i %i\n", indexSet.properties(*ei).lower_block->size(0), indexSet.properties(*ei).lower_block->size(1));
@@ -286,6 +288,168 @@ void OSNSMatrix::fillM(InteractionsGraph& indexSet, bool update)
   DEBUG_END("void OSNSMatrix::fillM(SP::InteractionsGraph indexSet, bool update)\n");
 }
 
+// Fill the matrix W
+void OSNSMatrix::fillV(InteractionsGraph& indexSet1, InteractionsGraph& indexSet0, bool update)
+{
+  DEBUG_BEGIN("void OSNSMatrix::fillV(SP::InteractionsGraph indexSet1, SP::InteractionsGraph indexSet0, bool update)\n");
+  DEBUG_PRINTF(" update = %i\n", update);
+  if(update)  // If index set vertices list has changed
+  {
+    // Computes _dimRow and interactionBlocksPositions according to indexSet1
+    _dimColumn = updateSizeAndPositions(indexSet0);
+    _dimRow = updateSizeAndPositions(indexSet1);
+    DEBUG_PRINTF(" _dimRow =%i\t, _dimColumn=%i   \n", _dimRow, _dimColumn   );
+  }
+
+  if(_storageType == NM_DENSE)
+  {
+
+    // === Memory allocation, if required ===
+    // Mem. is allocate only if !M or if its size has changed.
+    if(update)
+    {
+      if(! _M1)
+        _M1.reset(new SimpleMatrix(_dimRow, _dimColumn));
+      else
+      {
+        if(_M1->size(0) != _dimRow || _M1->size(1) != _dimColumn)
+          _M1->resize(_dimRow, _dimColumn);
+        _M1->zero();
+      }
+    }
+
+    unsigned int pos = 0, col = 0; // index position used for
+    InteractionsGraph::VIterator vi, viend;
+    for(std::tie(vi, viend) = indexSet0.vertices();
+        vi != viend; ++vi)
+      {
+	SP::Interaction inter = indexSet0.bundle(*vi);
+
+	// use indexSet1.vertex_descriptor_map()
+	if (indexSet1.is_vertex(inter))
+	  {
+	    //std::cout << " inter number "<< inter->number() << " is in indexSet1" << std::endl;
+
+	    // get its position (row ) in indexSet1
+	    InteractionsGraph::VDescriptor vd1_in_indexSet1 = indexSet1.descriptor(inter);
+	    //std::cout << "vd1_in_indexSet1" << vd1_in_indexSet1 << std::endl;
+	    pos = indexSet1.properties(vd1_in_indexSet1).absolute_position;
+	    //std::cout << " inter pos (relative to indexSet1) : " << pos << std::endl;
+
+	    // get its position col in indexset0
+	    col = indexSet0.properties(*vi).absolute_position;
+	    //std::cout << " inter col (relative to indexSet0) : " << col << std::endl;
+	    
+	    // get its original position pos in indexset0
+	    unsigned int pos_original = col;
+	    //std::cout << " inter pos original (relative to indexSet0) : " << pos_original << std::endl;
+	
+	    // insert "diagonal block"
+	    //std::cout << " insert diagonal block at  : " << pos << " " << col << std::endl;
+	    std::static_pointer_cast<SimpleMatrix>(_M1)
+	       ->setBlock(pos, col, *indexSet0.properties(*vi).block);
+	    
+	    /* on a undirected graph, out_edges gives all incident edges */
+	    InteractionsGraph::OEIterator oei, oeiend;
+	    for(std::tie(oei, oeiend) = indexSet0.out_edges(*vi);
+		oei != oeiend; ++oei)
+	      {
+		SP::Interaction inter1 = indexSet0.bundle(indexSet0.source(*oei));
+		assert(inter->number() == inter1->number());
+
+		
+		SP::Interaction inter2 = indexSet0.bundle(indexSet0.target(*oei));
+		// get is position (col )in indexSet0
+		InteractionsGraph::VDescriptor vd2 = indexSet0.target(*oei);
+		col = indexSet0.properties(vd2).absolute_position;
+		// insert "extra diagonal block"
+		//std::cout << " inter 2 col (relative to indexSet0) : " << col << std::endl;
+		//std::cout << " insert extra diagonal block at  : " << pos << " " << col << std::endl;
+		
+		assert(pos_original!=col);
+		if (pos_original > col)
+		  {
+		    //std::cout << " pos_original > col  : we insert the lower block " << std::endl; 
+		    std::static_pointer_cast<SimpleMatrix>(_M1)
+		      ->setBlock(pos, col,
+				 *indexSet0.properties(*oei).lower_block);
+		  }
+		else
+		  {
+		    //std::cout << " pos_original < col  : we insert the upper block " << std::endl;
+		    std::static_pointer_cast<SimpleMatrix>(_M1)
+		      ->setBlock(pos, col,
+				 *indexSet0.properties(*oei).upper_block);	    
+		 } 
+	      }
+	  }
+      }
+
+    // /////////// --------------- DEBUG
+
+    // // std::cout << "index0.display()" << std::endl;
+    // // indexSet0.display();
+
+    // // std::cout << "index1.display()" << std::endl;
+    // // indexSet1.display();
+
+    
+    // for(std::tie(vi, viend) = indexSet1.vertices();
+    //     vi != viend; ++vi)
+    //   {
+    // 	SP::Interaction inter = indexSet1.bundle(*vi);
+    // 	pos = indexSet1.properties(*vi).absolute_position;
+    // 	InteractionsGraph::VDescriptor vd1 = *vi;
+    // 	unsigned int pos_other  = indexSet1.properties(*vi).absolute_position_proj;
+    // 	std::cout<< "indexset 1: Interaction # " << inter->number()
+    // 		 << " pos: " << pos
+    // 		 << " pos_other: " << pos_other
+    // 		 << " vi " << *vi
+    // 		 << " &indexSet1.properties(vd1)" << &indexSet1.properties(vd1) 
+    // 		 << std::endl;
+    //   }
+    // for(std::tie(vi, viend) = indexSet0.vertices();
+    //     vi != viend; ++vi)
+    //   {
+    // 	SP::Interaction inter = indexSet0.bundle(*vi);
+    // 	SP::Interaction inter_in_indexSet1 = indexSet1.bundle(*vi);
+    // 	InteractionsGraph::VDescriptor vd1 = *vi;
+    // 	pos = indexSet0.properties(*vi).absolute_position;
+    // 	unsigned int pos_other  = indexSet0.properties(*vi).absolute_position_proj;
+    // 	std::cout<< "indexset 0: Interaction # " << inter->number()
+    // 		 << " pos: " << pos
+    // 		 << " pos_other: " << pos_other
+    // 		 << " vi " << *vi
+    // 		 << " vd1 " << vd1
+    // 		 << " inter in indexSet 1 " << inter_in_indexSet1->number()
+    // 		 << " &indexSet0.properties(vd1)" << &indexSet0.properties(vd1) 
+    // 		 << std::endl;
+    //   }
+    // /////////// ---------------
+
+  }
+  // else if(_storageType == NM_SPARSE_BLOCK)
+  // {
+  //   if(! _M2)
+  //   {
+  //     DEBUG_PRINT("Reset _M2 shared pointer using new BlockCSRMatrix(indexSet) \n ");
+  //     _M2.reset(new BlockCSRMatrix(indexSet));
+
+  //   }
+  //   else
+  //   {
+  //     DEBUG_PRINT("fill existing _M2\n");
+  //     _M2->fill(indexSet);
+  //     DEBUG_EXPR(_M2->display(););
+  //   }
+  // }
+  else
+    THROW_EXCEPTION("OSNSMatrix::fillV unknown _storageType");
+
+  if(update)
+    convert();
+  DEBUG_END("void OSNSMatrix::fillV(SP::InteractionsGraph indexSet1, SP::InteractionsGraph indexSet0, bool update)\n");
+}
 // convert current matrix to NumericsMatrix structure
 void OSNSMatrix::convert()
 {

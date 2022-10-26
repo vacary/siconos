@@ -25,9 +25,9 @@
 #include "OSNSMatrix.hpp"
 #include "NumericsMatrix.h"
 
-#define DEBUG_NOCOLOR
-#define DEBUG_STDOUT
-#define DEBUG_MESSAGES
+// #define DEBUG_NOCOLOR
+// #define DEBUG_STDOUT
+// #define DEBUG_MESSAGES
 #include "siconos_debug.h"
 
 using namespace RELATION;
@@ -38,6 +38,39 @@ CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, int numericsSolverId
 {
   if(! _q_cohesion)
     _q_cohesion.reset(new SiconosVector(LinearOSNS::maxSize()));
+  
+  if (_assemblyType == REDUCED_BLOCK or  _assemblyType == REDUCED_DIRECT)
+  {
+    if(! _V)
+    {
+      switch(_numericsMatrixStorageType)
+      {
+      case NM_DENSE:
+      case NM_SPARSE:
+      {
+        _V.reset(new OSNSMatrix(0, _numericsMatrixStorageType));
+        break;
+      }
+      case NM_SPARSE_BLOCK:
+      {
+        // = number of Interactionin the largest considered indexSet
+        if(indexSetLevel() != LEVELMAX && simulation()->nonSmoothDynamicalSystem()->topology()->indexSetsSize() > indexSetLevel())
+        {
+          _V.reset(new OSNSMatrix(simulation()->indexSet(indexSetLevel())->size(), _numericsMatrixStorageType));
+        }
+        else
+        {
+          _V.reset(new OSNSMatrix(1, _numericsMatrixStorageType));
+        }
+        break;
+      }
+      {
+        default:
+          THROW_EXCEPTION("LinearOSNS::initOSNSMatrix unknown _storageType");
+      }
+      }
+    }
+  }
 }
 
 CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, SP::SolverOptions options):
@@ -45,6 +78,42 @@ CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, SP::SolverOptions op
 {
   if(! _q_cohesion)
     _q_cohesion.reset(new SiconosVector(LinearOSNS::maxSize()));
+
+  if (_assemblyType == REDUCED_BLOCK or  _assemblyType == REDUCED_DIRECT)
+  {
+    if(! _V)
+    {
+      switch(_numericsMatrixStorageType)
+      {
+      case NM_DENSE:
+      case NM_SPARSE:
+      {
+        _V.reset(new OSNSMatrix(0, _numericsMatrixStorageType));
+        break;
+      }
+      case NM_SPARSE_BLOCK:
+      {
+        // = number of Interactionin the largest considered indexSet
+        if(indexSetLevel() != LEVELMAX && simulation()->nonSmoothDynamicalSystem()->topology()->indexSetsSize() > indexSetLevel())
+        {
+          _V.reset(new OSNSMatrix(simulation()->indexSet(indexSetLevel())->size(), _numericsMatrixStorageType));
+        }
+        else
+        {
+          _V.reset(new OSNSMatrix(1, _numericsMatrixStorageType));
+        }
+        break;
+      }
+      {
+        default:
+          THROW_EXCEPTION("LinearOSNS::initOSNSMatrix unknown _storageType");
+      }
+      }
+    }
+  }
+
+
+  
 }
 
 
@@ -53,43 +122,8 @@ void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescr
   DEBUG_BEGIN("CohesiveFrictionContact::compute_q_cohesion_Block(SP::Interaction inter, unsigned int pos)\n");
   SP::InteractionsGraph indexSet = simulation()->indexSet(0);
 
-  // // At most 2 DS are linked by an Interaction
-  SP::DynamicalSystem ds1;
-  SP::DynamicalSystem ds2;
-  // --- Get the dynamical system(s) (edge(s)) connected to the current interaction (vertex) ---
-  if(indexSet->properties(vertex_inter).source != indexSet->properties(vertex_inter).target)
-  {
-    DEBUG_PRINT("a two DS Interaction\n");
-    ds1 = indexSet->properties(vertex_inter).source;
-    ds2 = indexSet->properties(vertex_inter).target;
-  }
-  else
-  {
-    DEBUG_PRINT("a single DS Interaction\n");
-    ds1 = indexSet->properties(vertex_inter).source;
-    ds2 = ds1;
-    // \warning this looks like some debug code, but it gets executed even with NDEBUG.
-    // may be compiler does something smarter, but still it should be rewritten. --xhub
-    InteractionsGraph::OEIterator oei, oeiend;
-    for(std::tie(oei, oeiend) = indexSet->out_edges(vertex_inter);
-        oei != oeiend; ++oei)
-    {
-      // note : at most 4 edges
-      ds2 = indexSet->bundle(*oei);
-      if(ds2 != ds1)
-      {
-        assert(false);
-        break;
-      }
-    }
-  }
-  assert(ds1);
-  assert(ds2);
-
-  DynamicalSystemsGraph& DSG0 = *simulation()->nonSmoothDynamicalSystem()->dynamicalSystems();
-
-  OneStepIntegrator& osi1 = *DSG0.properties(DSG0.descriptor(ds1)).osi;
-  OneStepIntegrator& osi2 = *DSG0.properties(DSG0.descriptor(ds2)).osi;
+  OneStepIntegrator& osi1 = *indexSet->properties(vertex_inter).osi1;
+  OneStepIntegrator& osi2 = *indexSet->properties(vertex_inter).osi2;
 
   OSI::TYPES osi1Type = osi1.getType();
   OSI::TYPES osi2Type = osi2.getType();
@@ -105,14 +139,16 @@ void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescr
     if((osi1Type == OSI::MOREAUJEANOSI  && osi2Type == OSI::MOREAUJEANOSI)||
        (osi1Type == OSI::MOREAUDIRECTPROJECTIONOSI && osi2Type == OSI::MOREAUDIRECTPROJECTIONOSI))
     {
-      //osi1.computeFreeOutput(vertex_inter, this); This has already been done
+      // This has already been done for indexSet 1
+      // we redo it for indexSet0. We should be more efficient
+      osi1.computeFreeOutput(vertex_inter, this); 
       SiconosVector& osnsp_rhs_cohesion = *(*indexSet->properties(vertex_inter).workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
       setBlock(osnsp_rhs_cohesion, _q_cohesion, sizeY, 0, pos);
     }
     else
       THROW_EXCEPTION("CohesiveFrictionContact::compute_q_cohesion_Block not yet implemented for OSI1 and OSI2 of type " + std::to_string(osi1Type)  + std::to_string(osi2Type));
   }
-  //DEBUG_EXPR(_q_cohesion->display());
+  DEBUG_EXPR(_q_cohesion->display());
   DEBUG_END("CohesiveFrictionContact::compute_q_cohesion_Block (SP::Interaction inter, unsigned int pos)\n");
 }
 
@@ -124,31 +160,30 @@ void CohesiveFrictionContact::computeq(double time)
 
   // === Get index set from Simulation ===
   SP::InteractionsGraph indexSet = simulation()->indexSet(indexSetLevel());
+  SP::InteractionsGraph indexSet0 = simulation()->indexSet(0);
   // === Loop through "active" Interactions (ie present in
   // indexSets[level]) ===
 
-  DEBUG_PRINTF("indexSetLevel() = %i\t", indexSetLevel());
-  DEBUG_PRINTF("_sizeOutput = %i \n", _sizeOutput);
-  
   unsigned int pos = 0;
   InteractionsGraph::VIterator ui, uiend;
-  if(_q_cohesion->size() != _sizeOutput)
-    _q_cohesion->resize(_sizeOutput);
+  if(_q_cohesion->size() != _sizeOutput_cohesion)
+    _q_cohesion->resize(_sizeOutput_cohesion);
   _q_cohesion->zero();
 
-  for(std::tie(ui, uiend) = indexSet->vertices(); ui != uiend; ++ui)
+  for(std::tie(ui, uiend) = indexSet0->vertices(); ui != uiend; ++ui)
   {
-    pos = indexSet->properties(*ui).absolute_position;
-    SP::Interaction inter = indexSet->bundle(*ui);
-    DEBUG_EXPR(inter->nonSmoothLaw()->display(););
+    pos = indexSet0->properties(*ui).absolute_position;
+    SP::Interaction inter = indexSet0->bundle(*ui);
     compute_q_cohesion_Block(*ui, pos);
   }
 
-  //DEBUG_EXPR(_M->display(););
-  NumericsMatrix * NM  = &*(_M->numericsMatrix());
-
 
   DEBUG_EXPR(_q_cohesion->display(););
+
+  
+  //DEBUG_EXPR(_M->display(););
+  NumericsMatrix * NM  = &*(_V->numericsMatrix());
+
   DEBUG_PRINT("before");
   DEBUG_EXPR(_q->display(););
   NM_gemv(1.0,
@@ -157,22 +192,69 @@ void CohesiveFrictionContact::computeq(double time)
           1.0,
           &*_q->getArray());
 
-  DEBUG_EXPR(
-    SP::SiconosVector q_add(new SiconosVector(*_q_cohesion));
-    q_add->zero();
-    NM_gemv(1.0,
-            NM,
-            &*_q_cohesion->getArray(),
-            1.0,
-            &*q_add->getArray());
-    q_add->display();
-    );
+  // DEBUG_EXPR(
+  //   SP::SiconosVector q_add(new SiconosVector(*_q_cohesion));
+  //   q_add->zero();
+  //   NM_gemv(1.0,
+  //           NM,
+  //           &*_q_cohesion->getArray(),
+  //           1.0,
+  //           &*q_add->getArray());
+  //   q_add->display();
+  //   );
   DEBUG_EXPR(_q->display());
+}
+void CohesiveFrictionContact::computeV()
+{
+  if (_assemblyType == REDUCED_BLOCK)
+  {
+
+    InteractionsGraph& indexSet0 = *simulation()->indexSet(0);
+    InteractionsGraph& indexSet1 = *simulation()->indexSet(1);
+    
+    // Computes new _interactionBlocks if required
+    updateInteractionBlocks(indexSet0);
+
+    // _V->fillM(indexSet0, !_hasBeenUpdated);
+    // DEBUG_PRINT("complete V");
+    // DEBUG_EXPR( _V->display(););
+    
+    _V->fillV(indexSet1, indexSet0, !_hasBeenUpdated);
+    DEBUG_PRINT("partial V");
+    DEBUG_EXPR( _V->display(););
+    
+
+  }
+  else
+    THROW_EXCEPTION("CohesiveFrictionContact::computeV unknown _assemblyTYPE");
+
+
+  DEBUG_EXPR(_M->display(););
+  // NumericsMatrix *   M_NM = _M->numericsMatrix().get();
+  // if (M_NM )
+  //   NM_display(M_NM);
+
+  // getchar();
+
 }
 
 bool CohesiveFrictionContact::preCompute(double time)
 {
+  
+  // Now we compute _V
+  computeV();
+
+  _sizeOutput_cohesion = _V->sizeColumn();
+  DEBUG_PRINTF("_sizeOutput_cohesion = %i \n", _sizeOutput_cohesion );
+  
+  // _M and _q are computed on indexSet 1
   LinearOSNS::preCompute(time);
+
+  unsigned int sizeInputIndexSet0 = simulation()->indexSet(0)->size();
+  unsigned int sizeInputIndexSet1 = simulation()->indexSet(1)->size();
+  DEBUG_PRINTF("sizeInputIndexSet0 = %i\t, sizeInputIndexSet1 = %i\t, _sizeOutput = %i\n", sizeInputIndexSet0, sizeInputIndexSet1, _sizeOutput);
+  
+
   InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
   if(_keepLambdaAndYState)
   {
@@ -207,6 +289,8 @@ void CohesiveFrictionContact::postCompute()
   // indexSet(leveMin) are concerned.
 
   //DEBUG_EXPR(display());
+
+  //*_z = *_z + *_q_cohesion;
 
   DEBUG_EXPR(_w->display(););
   DEBUG_EXPR(_z->display(););

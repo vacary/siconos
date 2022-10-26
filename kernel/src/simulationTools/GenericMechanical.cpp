@@ -232,7 +232,7 @@ void GenericMechanical::display() const
 }
 
 
-void  GenericMechanical::updateInteractionBlocks()
+void  GenericMechanical::updateInteractionBlocks(InteractionsGraph& indexSet)
 {
   if(!_hasBeenUpdated)
   {
@@ -240,7 +240,7 @@ void  GenericMechanical::updateInteractionBlocks()
     genericMechanicalProblem_free(_pnumerics_GMP, NUMERICS_GMP_FREE_GMP);
     _pnumerics_GMP = genericMechanicalProblem_new();
   }
-  LinearOSNS::updateInteractionBlocks();
+  LinearOSNS::updateInteractionBlocks(indexSet);
 }
 
 GenericMechanical::~GenericMechanical()

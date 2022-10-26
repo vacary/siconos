@@ -103,7 +103,7 @@ public:
 
   /** Update blocks used to compute M matrix.
    */
-  void updateInteractionBlocks() override;
+  void updateInteractionBlocks(InteractionsGraph& indexSet) override;
 
   /** get the number of equality constraints,
    *

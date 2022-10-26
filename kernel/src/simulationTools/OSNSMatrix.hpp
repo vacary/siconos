@@ -251,6 +251,13 @@ public:
    */
   virtual void fillM(InteractionsGraph&indexSet, bool update = true);
 
+  /** fill the current class using an index set
+   * 
+   *  \param indexSet the index set of the active constraints
+   *  \param update if true update the size of the Matrix (default true)
+   */
+  virtual void fillV(InteractionsGraph&indexSet, InteractionsGraph& indexSet0, bool update = true);
+
 
   /** Compute the M matrix given the inverse of W and H
    * 

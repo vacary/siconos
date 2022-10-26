@@ -110,7 +110,7 @@ public:
       compute interactionBlocks if necessary (this depends on the type of
       OSNS, on the indexSets ...)
    */
-  void updateInteractionBlocks() override;
+  void updateInteractionBlocks(InteractionsGraph& indexSet) override;
 
   /** Check the compatibility fol the nslaw with the targeted OSNSP */
   bool checkCompatibleNSLaw(NonSmoothLaw &nslaw) override;

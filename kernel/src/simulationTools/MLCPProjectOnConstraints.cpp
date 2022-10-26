@@ -74,7 +74,7 @@ void MLCPProjectOnConstraints::display() const
   std::cout << "======= m " << _m << " _n " << _n <<std::endl;
   LinearOSNS::display();
 }
-void MLCPProjectOnConstraints::updateInteractionBlocks()
+void MLCPProjectOnConstraints::updateInteractionBlocks(InteractionsGraph& indexSetdummy)
 {
   // The present functions checks various conditions and possibly
   // compute interactionBlocks matrices.

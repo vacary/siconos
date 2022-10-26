@@ -240,7 +240,7 @@ void MLCP::display() const
   LinearOSNS::display();
 }
 
-void  MLCP::updateInteractionBlocks()
+void  MLCP::updateInteractionBlocks(InteractionsGraph& indexSet)
 {
   if(!_hasBeenUpdated)
   {
@@ -248,5 +248,5 @@ void  MLCP::updateInteractionBlocks()
     _m = 0;
     _n = 0;
   }
-  LinearOSNS::updateInteractionBlocks();
+  LinearOSNS::updateInteractionBlocks(indexSet);
 }

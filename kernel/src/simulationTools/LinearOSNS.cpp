@@ -803,7 +803,7 @@ void LinearOSNS::computeM()
     InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
 
     // Computes new _interactionBlocks if required
-    updateInteractionBlocks();
+    updateInteractionBlocks(indexSet);
 
     //    _M->fill(indexSet);
     _M->fillM(indexSet, !_hasBeenUpdated);
@@ -887,6 +887,17 @@ bool LinearOSNS::preCompute(double time)
   if(indexSet.size() == 0)
   {
     DEBUG_END("bool LinearOSNS::preCompute(double time)\n");
+    _sizeOutput = 0;
+    if(_z->size() != _sizeOutput)
+    {
+      _z->resize(_sizeOutput);
+    }
+    if(_w->size() != _sizeOutput)
+    {
+      _w->resize(_sizeOutput);
+    }
+    _M->fillM(indexSet);
+    _q->resize(_sizeOutput);
     return false;
   }
 #ifdef WITH_TIMER

@@ -72,12 +72,20 @@
 class CohesiveFrictionContact : public FrictionContact
 {
 
-  SP::SiconosVector _q_cohesion;
+ 
 protected:
   /** serialization hooks
   */
   ACCEPT_SERIALIZATION(CohesiveFrictionContact);
 
+  /** matrix V of a LinearOSNS system */
+  SP::OSNSMatrix _V;
+
+  SP::SiconosVector _q_cohesion;
+
+  /** size of the nonsmooth problem */
+  unsigned int _sizeOutput_cohesion = 0;
+  
 public:
 
   /** constructor (solver id and dimension)
@@ -115,7 +123,9 @@ public:
    *  \param time the current time
    */
   void computeq(double time) override;
-
+	
+  void computeV();
+  
   /** build problem coefficients (if required)
       \param time the current time
       \return true if succeeded

@@ -247,7 +247,7 @@ public:
   /** compute interactionBlocks if necessary (this depends on the type of
    *  OSNS, on the indexSets ...)
    */
-  virtual void updateInteractionBlocks();
+  virtual void updateInteractionBlocks(InteractionsGraph& indexSet);
 
   /** compute extra-diagonal interactionBlock-matrix
    *
