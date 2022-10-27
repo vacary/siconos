@@ -772,6 +772,20 @@ void OSNSMatrix::computeM(SP::NumericsMatrix Winverse, SP::NumericsMatrix Htrans
     NM_free(H_NM);
 }
 
+void OSNSMatrix::computeV(SP::NumericsMatrix Htrans, SP::NumericsMatrix Winverse, SP::NumericsMatrix H0)
+{
+  // Compute V = H^T * Winverse * H0
+  
+  NumericsMatrix *   NM1 = NM_multiply(Winverse.get(), H0.get());
+  
+  _numericsMatrix.reset(NM_multiply(Htrans.get(), NM1), NM_free);
+
+  _dimRow = _numericsMatrix->size0;
+  _dimColumn = _numericsMatrix->size1;
+
+  NM_free(NM1);
+}
+
 
 
 // Display data

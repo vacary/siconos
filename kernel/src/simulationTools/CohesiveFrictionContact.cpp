@@ -33,88 +33,87 @@
 using namespace RELATION;
 
 CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, int numericsSolverId):
-  FrictionContact(dimPb, SP::SolverOptions(solver_options_create(numericsSolverId),
+  CohesiveFrictionContact(dimPb, SP::SolverOptions(solver_options_create(numericsSolverId),
                   solver_options_delete))
-{
-  if(! _q_cohesion)
-    _q_cohesion.reset(new SiconosVector(LinearOSNS::maxSize()));
-
-  if (_assemblyType == REDUCED_BLOCK or  _assemblyType == REDUCED_DIRECT)
-  {
-    if(! _V)
-    {
-      switch(_numericsMatrixStorageType)
-      {
-      case NM_DENSE:
-      case NM_SPARSE:
-      {
-        _V.reset(new OSNSMatrix(0, _numericsMatrixStorageType));
-        break;
-      }
-      case NM_SPARSE_BLOCK:
-      {
-        // = number of Interactionin the largest considered indexSet
-        if(indexSetLevel() != LEVELMAX && simulation()->nonSmoothDynamicalSystem()->topology()->indexSetsSize() > indexSetLevel())
-        {
-          _V.reset(new OSNSMatrix(simulation()->indexSet(indexSetLevel())->size(), _numericsMatrixStorageType));
-        }
-        else
-        {
-          _V.reset(new OSNSMatrix(1, _numericsMatrixStorageType));
-        }
-        break;
-      }
-      {
-        default:
-          THROW_EXCEPTION("LinearOSNS::initOSNSMatrix unknown _storageType");
-      }
-      }
-    }
-  }
-}
+{}
 
 CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, SP::SolverOptions options):
   FrictionContact(dimPb, options)
 {
+  
+}
+
+void CohesiveFrictionContact::initialize(SP::Simulation sim)
+{
+  DEBUG_BEGIN("CohesiveFrictionContact::initialize(SP::Simulation sim)\n");
+  FrictionContact::initialize(sim);
   if(! _q_cohesion)
     _q_cohesion.reset(new SiconosVector(LinearOSNS::maxSize()));
 
   if (_assemblyType == REDUCED_BLOCK or  _assemblyType == REDUCED_DIRECT)
-  {
-    if(! _V)
     {
-      switch(_numericsMatrixStorageType)
-      {
-      case NM_DENSE:
-      case NM_SPARSE:
-      {
-        _V.reset(new OSNSMatrix(0, _numericsMatrixStorageType));
-        break;
-      }
-      case NM_SPARSE_BLOCK:
-      {
-        // = number of Interactionin the largest considered indexSet
-        if(indexSetLevel() != LEVELMAX && simulation()->nonSmoothDynamicalSystem()->topology()->indexSetsSize() > indexSetLevel())
-        {
-          _V.reset(new OSNSMatrix(simulation()->indexSet(indexSetLevel())->size(), _numericsMatrixStorageType));
-        }
-        else
-        {
-          _V.reset(new OSNSMatrix(1, _numericsMatrixStorageType));
-        }
-        break;
-      }
-      {
-        default:
-          THROW_EXCEPTION("LinearOSNS::initOSNSMatrix unknown _storageType");
-      }
-      }
+      if(! _V)
+	{
+	  switch(_numericsMatrixStorageType)
+	    {
+	    case NM_DENSE:
+	    case NM_SPARSE:
+	      {
+		_V.reset(new OSNSMatrix(0, _numericsMatrixStorageType));
+		break;
+	      }
+	    case NM_SPARSE_BLOCK:
+	      {
+		// = number of Interactionin the largest considered indexSet
+		if(indexSetLevel() != LEVELMAX && simulation()->nonSmoothDynamicalSystem()->topology()->indexSetsSize() > indexSetLevel())
+		  {
+		    _V.reset(new OSNSMatrix(simulation()->indexSet(indexSetLevel())->size(), _numericsMatrixStorageType));
+		  }
+		else
+		  {
+		    _V.reset(new OSNSMatrix(1, _numericsMatrixStorageType));
+		  }
+		break;
+	      }
+	      {
+		default:
+		  THROW_EXCEPTION("LinearOSNS::initOSNSMatrix unknown _storageType");
+	      }
+	    }
+	}
     }
-  }
+  if (_assemblyType == REDUCED_DIRECT)
+    {
+      if(!_H0)
+	{
 
-
-
+	  switch(_numericsMatrixStorageType)
+	    {
+	    case NM_DENSE:
+	      {
+		_H0.reset(new OSNSMatrix(_maxSize, NM_DENSE));
+		break;
+	      }
+	    case NM_SPARSE:
+	      {
+		_H0.reset(new OSNSMatrix(0, simulation()->indexSet(_indexSetLevel)->size(), NM_SPARSE));
+		break;
+	      }
+	    case NM_SPARSE_BLOCK:
+	      {
+		_H0.reset(new OSNSMatrix(simulation()->nonSmoothDynamicalSystem()->dynamicalSystems()->size(), simulation()->indexSet(_indexSetLevel)->size(), NM_SPARSE_BLOCK));
+		break;
+	      }
+	      {
+		default:
+		  THROW_EXCEPTION("LinearOSNS::initOSNSMatrix unknown _storageType");
+	      }
+	    }
+	}
+    }
+  DEBUG_END("CohesiveFrictionContact::initialize(SP::Simulation sim)\n");
 }
+
 
 
 void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescriptor& vertex_inter, unsigned int pos)
@@ -154,16 +153,15 @@ void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescr
 
 
 
-void CohesiveFrictionContact::computeq(double time)
+void CohesiveFrictionContact::update_q_with_q_cohesion(double time)
 {
-  LinearOSNS::computeq(time);
-
   // === Get index set from Simulation ===
-  SP::InteractionsGraph indexSet = simulation()->indexSet(indexSetLevel());
   SP::InteractionsGraph indexSet0 = simulation()->indexSet(0);
-  // === Loop through "active" Interactions (ie present in
-  // indexSets[level]) ===
 
+  _sizeOutput_cohesion = _V->sizeColumn();
+  DEBUG_PRINTF("_sizeOutput_cohesion = %i \n", _sizeOutput_cohesion );
+
+  // === Loop through all Interactions 
   unsigned int pos = 0;
   InteractionsGraph::VIterator ui, uiend;
   if(_q_cohesion->size() != _sizeOutput_cohesion)
@@ -177,9 +175,7 @@ void CohesiveFrictionContact::computeq(double time)
     compute_q_cohesion_Block(*ui, pos);
   }
 
-
   DEBUG_EXPR(_q_cohesion->display(););
-
 
   //DEBUG_EXPR(_M->display(););
   NumericsMatrix * NM  = &*(_V->numericsMatrix());
@@ -216,17 +212,29 @@ void CohesiveFrictionContact::computeV()
     // Computes new _interactionBlocks if required
     updateInteractionBlocks(indexSet0);
 
-    // _M->fillM(indexSet0, !_hasBeenUpdated);
-    //  DEBUG_EXPR( _M->display(););
-
-    // _V->fillM(indexSet0, !_hasBeenUpdated);
-    // DEBUG_PRINT("complete V");
-    // DEBUG_EXPR( _V->display(););
-
     _V->fillV(indexSet1, indexSet0, !_hasBeenUpdated);
     DEBUG_PRINT("partial V");
     DEBUG_EXPR( _V->display(););
 
+
+  }
+    else if (_assemblyType ==REDUCED_DIRECT)
+  {
+    InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
+    InteractionsGraph& indexSet0 = *simulation()->indexSet(0);
+    DynamicalSystemsGraph& DSG0 = *simulation()->nonSmoothDynamicalSystem()->dynamicalSystems();
+
+    // fill _Winverse
+    // _W_inverse->fillWinverse(DSG0); already done in computeM
+
+    // fill H (transpose)
+    //_H->fillHtrans(DSG0, indexSet);  already done in computeM
+
+    // fill H0
+    _H0->fillH(DSG0, indexSet0);
+
+    // ComputeM
+    _V->computeV(_H->numericsMatrix(), _W_inverse->numericsMatrix(), _H0->numericsMatrix());
 
   }
   else
@@ -246,14 +254,20 @@ bool CohesiveFrictionContact::preCompute(double time)
 {
   DEBUG_BEGIN(" CohesiveFrictionContact::preCompute(double time)\n");
 
-  // Now we compute _V
-  computeV();
-  _sizeOutput_cohesion = _V->sizeColumn();
-  DEBUG_PRINTF("_sizeOutput_cohesion = %i \n", _sizeOutput_cohesion );
-
   // _M and _q are computed on indexSet 1
-  LinearOSNS::preCompute(time);
+  bool hasContactActive = LinearOSNS::preCompute(time);
 
+  if (!hasContactActive) return false;
+
+  // compute _V
+  computeV();
+  
+  
+
+  // update q with cohesion input
+  update_q_with_q_cohesion(time);
+
+ 
   unsigned int sizeInputIndexSet0 = simulation()->indexSet(0)->size();
   unsigned int sizeInputIndexSet1 = simulation()->indexSet(1)->size();
   DEBUG_PRINTF("sizeInputIndexSet0 = %i\t, sizeInputIndexSet1 = %i\t, _sizeOutput = %i\n", sizeInputIndexSet0, sizeInputIndexSet1, _sizeOutput);

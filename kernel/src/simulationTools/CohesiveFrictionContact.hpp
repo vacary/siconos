@@ -81,6 +81,9 @@ protected:
   /** matrix V of a LinearOSNS system */
   SP::OSNSMatrix _V;
 
+  /** matrix H0 of a LinearOSNS system */
+  SP::OSNSMatrix _H0;
+
   SP::SiconosVector _q_cohesion;
 
   /** size of the nonsmooth problem */
@@ -106,6 +109,11 @@ public:
   */
   CohesiveFrictionContact(int dimPb, SP::SolverOptions options);
 
+  /** initialize the CohesiveFrictionContact problem(compute topology ...)
+   *   \param simulation the simulation, owner of this OSNSPB
+   */
+  void initialize(SP::Simulation sim) override;
+
   /** destructor
    */
   virtual ~CohesiveFrictionContact(){};
@@ -122,7 +130,7 @@ public:
   /** compute vector q
    *  \param time the current time
    */
-  void computeq(double time) override;
+  void update_q_with_q_cohesion(double time);
 	
   void computeV();
   

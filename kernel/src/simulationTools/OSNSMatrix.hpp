@@ -258,13 +258,20 @@ public:
    */
   virtual void fillV(InteractionsGraph&indexSet, InteractionsGraph& indexSet0, bool update = true);
 
-
-  /** Compute the M matrix given the inverse of W and H
+  /** Compute the M = H^T * Winverse * H  matrix given the inverse of W and H
    * 
    *  \param Winverse the NumericsMatrix that contains the inverse of W
-   *  \param Winverse the NumericsMatrix that contains H
+   *  \param Winverse the NumericsMatrix that contains Htrans
    */
-  void computeM(SP::NumericsMatrix Winverse, SP::NumericsMatrix H);
+  void computeM(SP::NumericsMatrix Winverse, SP::NumericsMatrix Htrans);
+
+  /** Compute the V = H^T * Winverse * H0 matrix given the inverse of W and H and H0 
+   *
+   *  \param Htrans the NumericsMatrix that contains Htrans
+   *  \param Winverse the NumericsMatrix that contains the inverse of W
+   *  \param H0 the NumericsMatrix that contains H0
+   */
+  void computeV(SP::NumericsMatrix Htrans, SP::NumericsMatrix Winverse, SP::NumericsMatrix H0);
 
   /** fill the current class using an index set with the W matrix of DS
    * 
