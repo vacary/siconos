@@ -33,6 +33,7 @@
 #include "NonSmoothLaw.hpp"
 #include "Simulation.hpp"
 
+// #define DEBUG_NOCOLOR
 // #define DEBUG_STDOUT
 // #define DEBUG_MESSAGES
 #include "siconos_debug.h"
@@ -313,42 +314,42 @@ void OneStepNSProblem::updateInteractionBlocks(InteractionsGraph& indexSet)
 
 }
 
-void OneStepNSProblem::displayBlocks(SP::InteractionsGraph indexSet)
+void OneStepNSProblem::displayBlocks(InteractionsGraph & indexSet)
 {
 
   std::cout <<  "OneStepNSProblem::displayBlocks(SP::InteractionsGraph indexSet) " << std::endl;
   InteractionsGraph::VIterator vi, viend;
-  for(std::tie(vi, viend) = indexSet->vertices();
+  for(std::tie(vi, viend) = indexSet.vertices();
       vi != viend; ++vi)
   {
-    SP::Interaction inter = indexSet->bundle(*vi);
-    if(indexSet->properties(*vi).block)
+    SP::Interaction inter = indexSet.bundle(*vi);
+    if(indexSet.properties(*vi).block)
     {
-      indexSet->properties(*vi).block->display();
+      indexSet.properties(*vi).block->display();
     }
 
     InteractionsGraph::OEIterator oei, oeiend;
-    for(std::tie(oei, oeiend) = indexSet->out_edges(*vi);
+    for(std::tie(oei, oeiend) = indexSet.out_edges(*vi);
         oei != oeiend; ++oei)
     {
       InteractionsGraph::EDescriptor ed1, ed2;
-      std::tie(ed1, ed2) = indexSet->edges(indexSet->source(*oei), indexSet->target(*oei));
+      std::tie(ed1, ed2) = indexSet.edges(indexSet.source(*oei), indexSet.target(*oei));
 
-      if(indexSet->properties(ed1).upper_block)
+      if(indexSet.properties(ed1).upper_block)
       {
-        indexSet->properties(ed1).upper_block->display();
+        indexSet.properties(ed1).upper_block->display();
       }
-      if(indexSet->properties(ed1).lower_block)
+      if(indexSet.properties(ed1).lower_block)
       {
-        indexSet->properties(ed1).lower_block->display();
+        indexSet.properties(ed1).lower_block->display();
       }
-      if(indexSet->properties(ed2).upper_block)
+      if(indexSet.properties(ed2).upper_block)
       {
-        indexSet->properties(ed2).upper_block->display();
+        indexSet.properties(ed2).upper_block->display();
       }
-      if(indexSet->properties(ed2).lower_block)
+      if(indexSet.properties(ed2).lower_block)
       {
-        indexSet->properties(ed2).lower_block->display();
+        indexSet.properties(ed2).lower_block->display();
       }
     }
 
