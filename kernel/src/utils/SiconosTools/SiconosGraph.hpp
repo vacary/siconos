@@ -890,12 +890,12 @@ public:
                 << ", index : "
                 << index(*vi)
                 << ", color : "
-                << color(*vi);
+                << color(*vi) << std::endl;
       OEIterator oei, oeiend, next;
       for (std::tie(oei, oeiend) = out_edges(*vi);
            oei != oeiend; ++oei)
       {
-        std::cout << "---"
+        std::cout << "    ---"
                   << bundle(*oei)
                   << "-->"
                   << "bundle : "
@@ -903,7 +903,7 @@ public:
                   << ", index : "
                   << index(target(*oei))
                   << ", color : "
-                  << color(target(*oei));
+                  << color(target(*oei)) << std::endl;
       }
       std::cout << std::endl;
     }
