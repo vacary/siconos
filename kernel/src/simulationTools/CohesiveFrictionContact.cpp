@@ -38,7 +38,7 @@ CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, int numericsSolverId
 {
   if(! _q_cohesion)
     _q_cohesion.reset(new SiconosVector(LinearOSNS::maxSize()));
-  
+
   if (_assemblyType == REDUCED_BLOCK or  _assemblyType == REDUCED_DIRECT)
   {
     if(! _V)
@@ -113,7 +113,7 @@ CohesiveFrictionContact::CohesiveFrictionContact(int dimPb, SP::SolverOptions op
   }
 
 
-  
+
 }
 
 
@@ -141,7 +141,7 @@ void CohesiveFrictionContact::compute_q_cohesion_Block(InteractionsGraph::VDescr
     {
       // This has already been done for indexSet 1
       // we redo it for indexSet0. We should be more efficient
-      osi1.computeFreeOutput(vertex_inter, this); 
+      osi1.computeFreeOutput(vertex_inter, this);
       SiconosVector& osnsp_rhs_cohesion = *(*indexSet->properties(vertex_inter).workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
       setBlock(osnsp_rhs_cohesion, _q_cohesion, sizeY, 0, pos);
     }
@@ -180,7 +180,7 @@ void CohesiveFrictionContact::computeq(double time)
 
   DEBUG_EXPR(_q_cohesion->display(););
 
-  
+
   //DEBUG_EXPR(_M->display(););
   NumericsMatrix * NM  = &*(_V->numericsMatrix());
 
@@ -211,18 +211,22 @@ void CohesiveFrictionContact::computeV()
 
     InteractionsGraph& indexSet0 = *simulation()->indexSet(0);
     InteractionsGraph& indexSet1 = *simulation()->indexSet(1);
-    
+    indexSet0.update_vertices_indices();
+    indexSet0.update_edges_indices();
     // Computes new _interactionBlocks if required
     updateInteractionBlocks(indexSet0);
+
+    // _M->fillM(indexSet0, !_hasBeenUpdated);
+    //  DEBUG_EXPR( _M->display(););
 
     // _V->fillM(indexSet0, !_hasBeenUpdated);
     // DEBUG_PRINT("complete V");
     // DEBUG_EXPR( _V->display(););
-    
+
     _V->fillV(indexSet1, indexSet0, !_hasBeenUpdated);
     DEBUG_PRINT("partial V");
     DEBUG_EXPR( _V->display(););
-    
+
 
   }
   else
@@ -240,20 +244,20 @@ void CohesiveFrictionContact::computeV()
 
 bool CohesiveFrictionContact::preCompute(double time)
 {
-  
+  DEBUG_BEGIN(" CohesiveFrictionContact::preCompute(double time)\n");
+
   // Now we compute _V
   computeV();
-
   _sizeOutput_cohesion = _V->sizeColumn();
   DEBUG_PRINTF("_sizeOutput_cohesion = %i \n", _sizeOutput_cohesion );
-  
+
   // _M and _q are computed on indexSet 1
   LinearOSNS::preCompute(time);
 
   unsigned int sizeInputIndexSet0 = simulation()->indexSet(0)->size();
   unsigned int sizeInputIndexSet1 = simulation()->indexSet(1)->size();
   DEBUG_PRINTF("sizeInputIndexSet0 = %i\t, sizeInputIndexSet1 = %i\t, _sizeOutput = %i\n", sizeInputIndexSet0, sizeInputIndexSet1, _sizeOutput);
-  
+
 
   InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
   if(_keepLambdaAndYState)
@@ -270,7 +274,7 @@ bool CohesiveFrictionContact::preCompute(double time)
         // or z
         unsigned int pos = indexSet.properties(*ui).absolute_position;
         SiconosVector& osnsp_rhs_cohesion = *(*indexSet.properties(*ui).workVectors)[MoreauJeanOSI::OSNSP_RHS_COHESION];
-        
+
         for (int k =0; k < osnsp_rhs_cohesion.size(); k++)
         {
           (*_z)(pos+k) -= osnsp_rhs_cohesion(k);
@@ -278,6 +282,7 @@ bool CohesiveFrictionContact::preCompute(double time)
       }
     }
   }
+  DEBUG_END(" CohesiveFrictionContact::preCompute(double time)\n");
   return true;
 }
 
@@ -338,7 +343,7 @@ bool CohesiveFrictionContact::checkCompatibleNSLaw(NonSmoothLaw& nslaw)
 
   if (not (Type::value(nslaw) == Type::CohesiveZoneModelNIFNSL ||
 	   Type::value(nslaw) == Type::NewtonImpactFrictionNSL  ))
-	  
+
   {
     THROW_EXCEPTION("\nCohesiveFrictionContact::checkCompatibleNSLaw -  \n\
                       The chosen nonsmooth law is not compatible with CohesiveFrictionalContact one step nonsmooth problem. \n\
