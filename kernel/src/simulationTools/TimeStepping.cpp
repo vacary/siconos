@@ -626,6 +626,7 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep)
     if (!_skip_last_updateInput)
       updateOutput();
     updateInteractionInternalState();
+
     updateAllInput();
     updateState();
     if (!_skip_last_updateOutput)

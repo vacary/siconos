@@ -540,7 +540,6 @@ public:
    */
   void updateState(const unsigned int level) override;
 
-
   /** update the state of the nonsmooth law
    */
   virtual void updateInteractionInternalState() override;
