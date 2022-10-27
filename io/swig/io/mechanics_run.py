@@ -959,7 +959,7 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                 self._shape = ShapeCollection(io=self._shape_filename)
         return self
 
-    def log(self, fun, with_timer=False, before=False):
+    def log(self, fun, with_timer=False, before=True):
         if with_timer:
             t = Timer()
 
@@ -2400,7 +2400,7 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
             self.log(s.initializeNSDSChangelog, with_timer)()
             self.log(s.updateOutput, with_timer)()
             self.log(s.initOSNS, with_timer)()
-            self.log(s.updateInput, with_timer)()
+            self.log(s.updateAllInput, with_timer)()
 
         self.log(s.updateDSPlugins, with_timer)(s.nextTime())
         self.log(s.computeResidu, with_timer)()
@@ -2431,8 +2431,9 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                 else:
                     info = self.log(s.computeOneStepNSProblem, with_timer)(SICONOS_OSNSP_TS_VELOCITY)
                 self.log(s.DefaultCheckSolverOutput, with_timer)(info)
+                self.log(s.updateInteractionInternalState, with_timer)()
                 if not s.skipLastUpdateInput():
-                    self.log(s.updateInput, with_timer)()
+                    self.log(s.updateAllInput, with_timer)()
                 self.log(s.updateState, with_timer)()
                 if not s.skipLastUpdateOutput():
                     self.log(s.updateOutput, with_timer)()
@@ -2455,7 +2456,8 @@ class MechanicsHdf5Runner(siconos.io.mechanics_hdf5.MechanicsHdf5):
                     else:
                         info = self.log(s.computeOneStepNSProblem, with_timer)(SICONOS_OSNSP_TS_VELOCITY)
                 self.log(s.DefaultCheckSolverOutput, with_timer)(info)
-                self.log(s.updateInput, with_timer)()
+                self.log(s.updateInteractionInternalState, with_timer)()
+                self.log(s.updateAllInput, with_timer)()
                 self.log(s.updateState, with_timer)()
                 if (not isNewtonConverge) and (newtonNbIterations < newtonMaxIteration):
                     self.log(s.updateOutput, with_timer)()
