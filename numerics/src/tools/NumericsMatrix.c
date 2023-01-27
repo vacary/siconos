@@ -1,4 +1,3 @@
-
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
@@ -1302,18 +1301,26 @@ bool NM_compare(NumericsMatrix* A, NumericsMatrix* B, double tol)
   {
     return false;
   }
+  double a, b;
   for(int i =0; i< A->size0 ; i++)
   {
     for(int j =0; j< A->size1 ; j++)
     {
       /* DEBUG_PRINTF("error %i %i = %e\n",i,j, fabs(NM_get_value(A, i, j) - NM_get_value(B, i, j))); */
-      if(fabs(NM_get_value(A, i, j) - NM_get_value(B, i, j)) >= tol)
+      a = NM_get_value(A, i, j);
+      b = NM_get_value(B, i, j);
+      if(fabs(a - b) >= tol || (isnan(a) && !isnan(b)) || (!isnan(a) && isnan(b)))
       {
 
         DEBUG_PRINTF("A(%i,%i) = %e\t, B(%i,%i) = %e\t,  error = %e\n",
-                     i,j, NM_get_value(A, i, j),
-                     i,j, NM_get_value(B, i, j),
-                     fabs(NM_get_value(A, i, j) - NM_get_value(B, i, j)));
+                     i,j, a,
+                     i,j, b,
+                     fabs(a - b));
+
+        printf("A(%i,%i) = %e\t, B(%i,%i) = %e\t,  error = %e\n",
+                     i,j, a,
+                     i,j, b,
+                     fabs(a - b));
         return false;
       }
     }
@@ -2332,10 +2339,20 @@ NumericsMatrix* NM_eye(int size)
 {
   NumericsMatrix* M = NM_create(NM_SPARSE, size, size);
   /* version incremented in NSM_triplet_eye */
+  NSM_clear(M->matrix2);
+  free(M->matrix2);
   M->matrix2 = NSM_triplet_eye(size);
   NM_version_sync(M);
   return M;
 }
+
+NumericsMatrix* NM_scalar(int size, double s)
+{
+  NumericsMatrix* M = NM_create(NM_SPARSE, size, size);
+  M->matrix2 = NSM_triplet_scalar(size, s);
+  return M;
+}
+
 NumericsMatrix* NM_create(NM_types storageType, int size0, int size1)
 {
   NumericsMatrix* M = NM_new();
@@ -2666,6 +2683,11 @@ void NM_dense_to_sparse(NumericsMatrix*  A, NumericsMatrix* B, double threshold)
       CHECK_RETURN(CSparseMatrix_zentry(B->matrix2->triplet, i, j, A->matrix0[i + A->size0*j], threshold));
     }
   }
+  /* we update explicitely the size of B since it may be wrong if
+     the last column if full of zero (for instance for a zero matrix)*/
+  B->matrix2->triplet->m = A->size0;
+  B->matrix2->triplet->n = A->size1;
+
   if (A == B)
   {
     /* on the same matrix, the versions are the same */
@@ -5086,7 +5108,7 @@ int NM_inverse_diagonal_block_matrix_in_place(NumericsMatrix* A)
   assert(A->size0 == A->size1);
   int info =-1;
 
-  // get internal data (allocation of needed)
+  // get internal data (allocation if needed)
   NM_internalData(A);
 
   switch(A->storageType)
@@ -5108,6 +5130,74 @@ int NM_inverse_diagonal_block_matrix_in_place(NumericsMatrix* A)
   DEBUG_BEGIN("NM_inverse_diagonal_block_matrix_in_place(NumericsMatrix* A)\n");
   NM_version_sync(A);
   return (int)info;
+}
+
+
+NumericsMatrix *  NM_inverse_diagonal_block_matrix(NumericsMatrix* A, unsigned int block_number, unsigned int * blocksizes)
+{
+
+  DEBUG_BEGIN("NM_inverse_diagonal_block_matrix(NumericsMatrix* A, int * blocksizes))\n");
+  assert(A->size0 == A->size1);
+
+  NumericsMatrix * A_inv;
+
+  // get internal data (allocation if needed)
+  NM_internalData(A);
+
+  switch(A->storageType)
+  {
+  case NM_SPARSE_BLOCK:
+  {
+    // get internal data (allocation if needed)
+
+    A_inv = NM_create(NM_SPARSE_BLOCK, A->size0, A->size1);
+    NM_copy(A, A_inv);
+
+    lapack_int* ipiv = (lapack_int*)NM_iWork(A_inv, A_inv->size0, sizeof(lapack_int));
+    assert(A_inv->matrix1);
+    int info = SBM_inverse_diagonal_block_matrix_in_place(A_inv->matrix1, ipiv);
+    NM_internalData(A_inv)->isInversed = true;
+    break;
+  }
+  case NM_SPARSE:
+  {
+    // brute force implementation.
+    // We assume that it is used for convenience
+    // must be optimized for serious use.
+
+    A_inv = NM_create(NM_SPARSE, A->size0, A->size1);
+    NM_triplet_alloc(A_inv, A->size0);
+    int start_row = 0;
+    for (unsigned b =0; b < block_number; b++)
+    {
+      int block_size= blocksizes[b];
+
+      NumericsMatrix * block_NM = NM_create(NM_DENSE, block_size, block_size);
+
+      double ** block_adress = &block_NM->matrix0  ;
+
+      NM_extract_diag_block(A, b, start_row, block_size, block_adress);
+
+
+      NumericsMatrix* block_NM_inv =  NM_LU_inv(block_NM);
+
+      NM_insert(A_inv, block_NM_inv, start_row, start_row);
+
+      NM_free(block_NM);
+      NM_free(block_NM_inv);
+
+      start_row = start_row + block_size;
+
+    }
+    break;
+  }
+
+  default:
+    assert(0 && "NM_inverse_diagonal_block_matrix_in_place :  unknown storageType");
+  }
+
+  DEBUG_BEGIN("NM_inverse_diagonal_block_matrix(NumericsMatrix* A, int * blocksizes))\n");
+  return A_inv;
 }
 
 
@@ -5227,7 +5317,7 @@ size_t NM_nnz(const NumericsMatrix* M)
     return NSM_nnz(NSM_get_origin(M->matrix2));
   }
   default:
-    numerics_error("NM_nnz", "Unsupported matrix type %d in %s", M->storageType);
+    numerics_warning("NM_nnz", "Unsupported matrix type %d in %s", M->storageType, "NM_nnz");
     return SIZE_MAX;
   }
 }
@@ -5305,6 +5395,25 @@ int NM_is_symmetric(NumericsMatrix* A)
   return 0;
 }
 
+int NM_isnan(NumericsMatrix* M)
+{
+  switch(M->storageType)
+  {
+  case NM_DENSE:
+    assert(M->matrix0);
+    return NV_isnan(M->matrix0, M->size0 * M->size1 );
+  case NM_SPARSE:
+  {
+    assert(M->matrix2);
+    int nnz  = NSM_nnz(NSM_get_origin(M->matrix2));
+    return NV_isnan(NM_csc(M)->x, nnz );
+  }
+  default:
+    numerics_warning("NM_isnan", "Unsupported matrix type %d in %s", M->storageType, "NM_isnan");
+    return 1;
+  }
+}
+
 double NM_symmetry_discrepancy(NumericsMatrix* A)
 {
   int n = A->size0;
@@ -5320,6 +5429,10 @@ double NM_symmetry_discrepancy(NumericsMatrix* A)
   }
   return d;
 }
+
+
+
+
 #include "time.h"
 double NM_iterated_power_method(NumericsMatrix* A, double tol, int itermax)
 {
@@ -5504,6 +5617,9 @@ int NM_compute_balancing_matrices(NumericsMatrix* A, double tol, int itermax, Ba
   NumericsMatrix* D1_k = B->D1;
   NumericsMatrix* D2_k = B->D2;
 
+  double * D1_k_x= D1_k->matrix2->triplet->x;
+  double * D2_k_x= D2_k->matrix2->triplet->x;
+
   unsigned int size0 = B->size0;
   unsigned int size1 = B->size1;
 
@@ -5546,11 +5662,20 @@ int NM_compute_balancing_matrices(NumericsMatrix* A, double tol, int itermax, Ba
     }
 
     /* Update balancing matrix */
-    NM_gemm(1.0, D1_k, D_R, 0.0, D1_tmp);
-    NM_copy(D1_tmp, D1_k);
+    /* NM_gemm(1.0, D1_k, D_R, 0.0, D1_tmp); */
+    /* NM_copy(D1_tmp, D1_k); */
 
-    NM_gemm(1.0, D2_k, D_C, 0.0, D2_tmp);
-    NM_copy(D2_tmp, D2_k);
+    /* NM_gemm(1.0, D2_k, D_C, 0.0, D2_tmp); */
+    /* NM_copy(D2_tmp, D2_k); */
+
+    for(unsigned int i=0 ; i < size0; i++)
+    {
+      D1_k_x[i] = D1_k_x[i] * D_R_x[i];
+    }
+    for(unsigned int i=0 ; i < size1; i++)
+    {
+      D2_k_x[i] = D2_k_x[i] * D_C_x[i];
+    }
 
     /* NM_display(D1_k); */
     /* DEBUG_PRINTF("D1_k ");NV_display(NM_triplet(D1_k)->x, size); */
@@ -6234,7 +6359,7 @@ int NM_LDLT_factorize(NumericsMatrix* Ao)
           fprintf(stderr, "NM_LDLT_factorize: LBL_Factorize. Error return from Factorize: %d\n", info);
         }
         // Close logging stream.
-        fclose(logfile);
+        // fclose(logfile); // the file is closed after LBL_Finalize
 
       break;
       }
@@ -6452,4 +6577,146 @@ int NM_LDLT_solve(NumericsMatrix* Ao, double *b, unsigned int nrhs)
   }
   NM_version_sync(A);
   return info;
+}
+
+int NM_LDLT_refine(NumericsMatrix* Ao, double *x , double *b, unsigned int nrhs, double tol, int maxitref, int job )
+{
+
+  lapack_int info = 1;
+  /* factorization is done on destructible part only if
+   * !A->internalData->isLUfactorized */
+  NM_LDLT_factorize(Ao);
+
+  /* get the destructible part of the matrix */
+  NumericsMatrix *A = Ao->destructible;
+
+  if (NM_LDLT_factorized(A))
+  {
+
+    DEBUG_BEGIN("NM_LDLT_refine(NumericsMatrix* A, double *b, unsigned int nrhs)\n");
+    assert(A->size0 == A->size1);
+
+    switch (A->storageType)
+    {
+    case NM_DENSE:
+    case NM_SPARSE_BLOCK: /* sparse block -> triplet -> csc */
+    case NM_SPARSE:
+    {
+      NSM_linear_solver_params* p = NSM_linearSolverParams(A);
+      switch (p->LDLT_solver)
+      {
+#ifdef WITH_MA57
+      case NSM_HSL:
+      {
+        LBL_Data * lbl = (LBL_Data *)p->linear_solver_data;
+        // Solve.
+        for (int irhs=0; irhs <nrhs ; irhs++)
+        {
+          info = LBL_Refine(lbl, &x[irhs*A->size1], &b[irhs*A->size1], NM_half_triplet(A)->x,
+                            tol, maxitref, job); // MA57 is able to accept multiple rhs but the C wrapper lbl not.
+          if(info)
+          {
+            fprintf(stderr, "NM_LDLT_refine. LBL_Refine error return from Refine: %d\n", info);
+          }
+        }
+        break;
+      }
+#endif
+      default:
+      {
+        fprintf(stderr, "NM_LDLT_refine: unknown sparse linearrefiner %d\n", p->LDLT_solver);
+        exit(EXIT_FAILURE);
+      }
+      break;
+      }
+      break;
+    }
+    default:
+      assert (0 && "NM_LDLT_refine unknown storageType");
+    }
+
+
+    /* WARNING: cs returns 0 (false) for failed and 1 (true) for ok
+       CHECK_RETURN is ok for cs, but not for MUMPS and others */
+    /* some time we cannot find a solution to a linear system, and its fine, for
+     * instance with the minFBLSA. Therefore, we should not check here for
+     * problems, but the calling function has to check the return code.*/
+//  CHECK_RETURN(info);
+    DEBUG_END("NM_LDLT_refine(NumericsMatrix* A, double *b, unsigned keep)\n");
+  }
+
+  return info;
+}
+
+
+/*
+ * [in/out] x: rhs/solution
+ * [out] no. of iterations
+ * [out] -1 if solution of Ax=b contains NaNs
+ * [out] -2 if solution of A(dx)=b-Ax contains NaNs
+ */
+int NM_LU_refine(NumericsMatrix* A, double *x, double tol, int max_iter, double *residu)
+{
+  assert(A->size0 == A->size1);
+  int vecsize = A->size0;
+  int iteration = 0;
+
+  double *b = (double*)calloc(vecsize, sizeof(double));
+  double *dx = (double*)calloc(vecsize, sizeof(double));
+  // double *x_origin = (double*)calloc(vecsize, sizeof(double));
+
+  switch (A->storageType)
+  {
+  case NM_DENSE:
+  case NM_SPARSE_BLOCK: /* sparse block -> triplet -> csc */
+  case NM_SPARSE:
+  {
+    cblas_dcopy(vecsize, x, 1, b, 1);   // b  = rhs
+    cblas_dcopy(vecsize, x, 1, dx, 1);  // dx = rhs
+    iteration = 1;
+
+    NM_LU_solve(A, x, 1);               // solve Ax = b
+    if(NV_isnan(x, vecsize))            // return -1 if solution contains NaNs
+    {
+      free(b);   b = NULL;
+      free(dx); dx = NULL;
+      // free(x_origin); x_origin = NULL;
+      return -1;
+    }
+    // cblas_dcopy(vecsize, x, 1, x_origin, 1);  // save solution
+
+    NM_gemv(-1.0, A, x, 1.0, dx);       // dx = b - Ax
+    *residu = cblas_dnrm2(vecsize, dx, 1);
+
+    while(*residu > tol && iteration < max_iter)
+    {
+      iteration++;
+
+      NM_LU_solve(A, dx, 1);            // solve A(dx) = b - Ax
+      if(NV_isnan(dx, vecsize))         // return -1 if solution contains NaNs
+      {
+        // cblas_dcopy(vecsize, x_origin, 1, x, 1);  // get solution back
+        free(b); b = NULL;
+        free(dx); dx = NULL;
+        // free(x_origin); x_origin = NULL;
+        return -2;
+      }
+
+      NV_add(x, dx, vecsize, x);        // Update sol x+ = x + dx
+
+      cblas_dcopy(vecsize, b, 1, dx, 1);
+      NM_gemv(-1.0, A, x, 1.0, dx);     // dx   = b - Ax
+      *residu = cblas_dnrm2(vecsize, dx, 1);
+    }
+
+    // if (iteration == max_iter) cblas_dcopy(vecsize, x_origin, 1, x, 1);  // get solution back
+  }
+  default:
+    assert (0 && "NM_LU_refine unknown storageType");
+  }
+
+  free(b); b = NULL;
+  free(dx); dx = NULL;
+  // free(x_origin); x_origin = NULL;
+  return iteration;
 }
