@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,8 @@ extern "C"
    * solver-specific parameters*/
   struct NSM_linear_solver_params
   {
+
+    NumericsMatrix * parent_matrix;
     NSM_linear_solver solver;
     NSM_linear_solver LDLT_solver;
 
@@ -259,13 +261,43 @@ extern "C"
    *  \param M the NumericsSparseMatrix,
    *  \param type the type of sparse storage from NumericsSparseOrigin
    *  \return a comparable version. */
-  version_t NSM_version(const NumericsSparseMatrix* M, NSM_t type);
+  static inline version_t NSM_version(const NumericsSparseMatrix* M, NSM_t type)
+  {
+    return NDV_value(&(M->versions[type]));
+  }
+
+
+  /* internal inlined */
+  static inline NSM_t nsm_max(const NumericsSparseMatrix* M,
+                              NSM_t type1,
+                              NSM_t type2)
+  {
+    return NSM_version(M, type2) > NSM_version(M, type1) ?
+      type2 : type1;
+  }
+
+  /** Get the NumericsSparseOrigin with the latest version.
+   *
+   *  \param M the NumericsSparseMatrix
+   *  \return the NumericsSparseOrigin.
+   */
+  static inline NSM_t NSM_latest_id(const NumericsSparseMatrix* M)
+  {
+    assert(M);
+    return (nsm_max(M, nsm_max(M, nsm_max(M, NSM_TRIPLET,
+                                          NSM_HALF_TRIPLET),
+                             NSM_CSC),
+                    NSM_CSR));
+  }
 
   /** Get the maximum of versions of csparse matrices.
    *
    *  \param M the NumericsSparseMatrix,
    *  \return a comparable version. */
-  version_t NSM_max_version(const NumericsSparseMatrix* M);
+  static inline version_t NSM_max_version(const NumericsSparseMatrix* M)
+  {
+    return NSM_version(M, NSM_latest_id(M));
+  }
 
   /** Set the version of a NumericsSparseMatrix.
    *
@@ -296,13 +328,7 @@ extern "C"
    */
   void NSM_inc_version(NumericsSparseMatrix* M, NSM_t type);
 
-  /** Get the NumericsSparseOrigin with the latest version.
-   *
-   *  \param M the NumericsSparseMatrix
-   *  \return the NumericsSparseOrigin.
-   */
-  NSM_t NSM_latest_id(const NumericsSparseMatrix* M);
-  
+
   /** Get most recent CSparseMatrix.
    *
    *  \param M the NumericsSparseMatrix
@@ -313,7 +339,14 @@ extern "C"
   /** Sync matrix origin and version
    * \param M the NumericsSparseMatrix
    */
-  void NSM_version_sync(NumericsSparseMatrix* M);
+  static inline void NSM_version_sync(NumericsSparseMatrix* M)
+  {
+    if (NSM_max_version(M) > 0)
+    {
+      M->origin = NSM_latest_id(M);
+      assert(NSM_latest(M));
+    }
+  }
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 }

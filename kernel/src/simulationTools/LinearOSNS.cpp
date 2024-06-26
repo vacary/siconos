@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -560,6 +560,7 @@ void LinearOSNS::computeDiagonalInteractionBlock(const InteractionsGraph::VDescr
             * currentInteractionBlock +=  *std::static_pointer_cast<LagrangianCompliantLinearTIR>(inter->relation())->D()/simulation()->timeStep() ;
           }
         }
+
       }
     }
     else THROW_EXCEPTION("LinearOSNS::computeDiagonalInteractionBlock not yet implemented for relation of type " + std::to_string(relationType));
@@ -797,11 +798,10 @@ void LinearOSNS::computeq(double time)
 
 void LinearOSNS::computeM()
 {
+  InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
+  DynamicalSystemsGraph& DSG0 = *simulation()->nonSmoothDynamicalSystem()->dynamicalSystems();
   if (_assemblyType == REDUCED_BLOCK)
   {
-
-    InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
-
     // Computes new _interactionBlocks if required
     updateInteractionBlocks(indexSet);
 
@@ -811,8 +811,7 @@ void LinearOSNS::computeM()
   }
   else if (_assemblyType ==REDUCED_DIRECT)
   {
-    InteractionsGraph& indexSet = *simulation()->indexSet(indexSetLevel());
-    DynamicalSystemsGraph& DSG0 = *simulation()->nonSmoothDynamicalSystem()->dynamicalSystems();
+
 #ifdef WITH_TIMER
     std::chrono::time_point<std::chrono::system_clock> start, end, end_old;
     start = std::chrono::system_clock::now();
@@ -835,6 +834,7 @@ void LinearOSNS::computeM()
 #endif
     // ComputeM
     _M->computeM(_W_inverse->numericsMatrix(), _H->numericsMatrix());
+
 #ifdef WITH_TIMER
     end_old=end;
     end = std::chrono::system_clock::now();
@@ -846,11 +846,31 @@ void LinearOSNS::computeM()
   else
     THROW_EXCEPTION("LinearOSNS::computeM unknown _assemblyTYPE");
 
+  // ugly hack for FremondImpactFrictionNSL. VA 12/02/2024
+  InteractionsGraph::VIterator vi, viend;
+
+  for(std::tie(vi, viend) = indexSet.vertices();
+      vi != viend; ++vi)
+    {
+      Interaction &inter = *indexSet.bundle(*vi);
+      NonSmoothLaw & nslaw = *inter.nonSmoothLaw();
+      if (Type::value(nslaw) == Type::FremondImpactFrictionNSL)
+	{
+	  SP::DynamicalSystem ds1= indexSet.properties(*vi).source;
+	  OneStepIntegrator& osi = *DSG0.properties(DSG0.descriptor(ds1)).osi;
+	  double theta =(static_cast<MoreauJeanOSI&>(osi)).theta();
+	  NM_scal(theta,&*_M->numericsMatrix());
+	}
+      break;
+    }
+
   DEBUG_EXPR(_M->display(););
   // NumericsMatrix *   M_NM = _M->numericsMatrix().get();
   // if (M_NM )
   //   NM_display(M_NM);
-
+  // NumericsMatrix * M = &*_M->numericsMatrix();
+  // CSparseMatrix * A = NM_csc(M);
+  // CSparseMatrix_print(A, 0);
   // getchar();
 
 }

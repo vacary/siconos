@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ typedef void (*CheckSolverFPtr)(int, Simulation *);
 #define SICONOS_TS_LINEAR 1
 #define SICONOS_TS_LINEAR_IMPLICIT 2
 #define SICONOS_TS_NONLINEAR 3
+#define SICONOS_TS_NONLINEAR_FULL 4
 
 class TimeStepping : public Simulation {
 protected:
@@ -101,7 +102,11 @@ protected:
 
   /** boolean variable to display warning on non-convergence
    */
-  bool _warnOnNonConvergence;
+  bool _newtonWarningOnNonConvergence;
+
+  /** boolean variable to display warning if osnspb is not correcltys olved
+   */
+  bool _warningNonsmoothSolver;
 
   /** boolean variable to resetAllLamda at each step (default true)
    */
@@ -138,7 +143,7 @@ protected:
 public:
   /** initialisation specific to TimeStepping for OneStepNSProblem.
    */
-  void initOSNS() override;
+  void initializeOneStepNSProblem() override;
 
   /** Standard constructor
    *
@@ -224,9 +229,8 @@ public:
    *  It computes the initial residu and set the, if needed to Newton variable
    *  to start the newton algorithm.
    */
-  void initializeNewtonLoop();
-
-  void computeInitialNewtonState();
+  void initializeNewtonSolve();
+  void computeInitialStateOfTheStep() override;
   void prepareNewtonIteration();
 
   /** check the convergence of Newton algorithm according to criterion
@@ -262,10 +266,16 @@ public:
     _displayNewtonConvergence = newval;
   };
 
-  void setWarnOnNonConvergence(bool newval) { _warnOnNonConvergence = newval; };
-  bool warnOnNonConvergence() { return _warnOnNonConvergence; };
-  void displayNewtonConvergenceAtTheEnd(int info, unsigned int maxStep);
+  void setNewtonWarningOnNonConvergence(bool newval) { _newtonWarningOnNonConvergence = newval; };
+  bool newtonWarningOnNonConvergence() { return _newtonWarningOnNonConvergence; };
 
+  void setWarningNonsmoothSolver(bool newval) {  _warningNonsmoothSolver=newval;};
+  bool warningNonsmoothSolver() {  return _warningNonsmoothSolver;};
+  
+
+
+  
+  void displayNewtonConvergenceAtTheEnd(int info, unsigned int maxStep);
   void displayNewtonConvergenceInTheLoop();
 
   void setResetAllLambda(bool newval) { _resetAllLambda = newval; };

@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -237,9 +237,9 @@ void EventDriven::updateIndexSetsWithDoubleCondition()
   }
 }
 
-void EventDriven::initOSNS()
+void EventDriven::initializeOneStepNSProblem()
 {
-  DEBUG_BEGIN("EventDriven::initOSNS()\n");
+  DEBUG_BEGIN("EventDriven::initializeOneStepNSProblem()\n");
   assert(_nsds);
   assert(_nsds->topology());
   // for all Interactions in indexSet[i-1], compute y[i-1] and
@@ -249,7 +249,7 @@ void EventDriven::initOSNS()
   SP::Topology topo = _nsds->topology();
 
   // === update all index sets ===
-  updateIndexSets();
+  //updateIndexSets();
   initOSIRhs();
 
   if(!_allNSProblems->empty())  // ie if at least a non smooth problem has been built.
@@ -305,7 +305,7 @@ void EventDriven::initOSNS()
     //   };
     // }
   }
-  DEBUG_END("EventDriven::initOSNS()\n");
+  DEBUG_END("EventDriven::initializeOneStepNSProblem()\n");
 }
 
 void EventDriven::initOSIs()

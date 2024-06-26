@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,6 +147,7 @@ protected:
    */
   bool _isWSymmetricDefinitePositive;
 
+
   /** a boolean to know how the internal state of the Interaction are
    * explicitely integrated
    */
@@ -156,6 +157,16 @@ protected:
    * on the indexSet 0.
    */
   bool _hasInputInIndexSet0;
+
+  /** a boolean to perform activation with negative relative velocity
+   */
+  bool _activateWithNegativeRelativeVelocity;
+
+  /** Constraint activation threshold
+   *
+   */
+  double _constraintActivationThresholdVelocity;
+
 
   /**
       A set of work indices for the selected coordinates when
@@ -172,15 +183,18 @@ protected:
     OneStepNSProblem &_osnsp;
     Interaction &_inter;
     InteractionProperties &_interProp;
+    double _theta;
     double _h;
-
+    
     _NSLEffectOnFreeOutput(OneStepNSProblem &p, Interaction &inter,
-                           InteractionProperties &interProp, double h)
-      : _osnsp(p), _inter(inter), _interProp(interProp), _h(h) {};
+                           InteractionProperties &interProp,
+			   double theta, double h)
+      : _osnsp(p), _inter(inter), _interProp(interProp), _h(h), _theta(theta) {};
 
     void visit(const NewtonImpactNSL &nslaw);
     void visit(const RelayNSL &nslaw);
     void visit(const NewtonImpactFrictionNSL &nslaw);
+    void visit(const FremondImpactFrictionNSL &nslaw);
     void visit(const NewtonImpactRollingFrictionNSL &nslaw);
     void visit(const EqualityConditionNSL &nslaw);
     void visit(const MixedComplementarityConditionNSL &nslaw);
@@ -341,6 +355,17 @@ public:
   {
     return _constraintActivationThreshold;
   }
+  /** set the constraint activation threshold */
+  inline void setConstraintActivationThresholdVelocity(double v)
+  {
+    _constraintActivationThresholdVelocity = v;
+  }
+
+  /** get the constraint activation threshold */
+  inline double constraintActivationThresholdVelocity()
+  {
+    return _constraintActivationThresholdVelocity;
+  }
 
   /** get boolean _explicitNewtonEulerDSOperators for the relation
    *
@@ -371,6 +396,25 @@ public:
   setExplicitIntegrationofInteractionInternalState(bool newExplicitIntegrationofInteractionInternalState)
   {
     _explicitIntegrationofInteractionInternalState = newExplicitIntegrationofInteractionInternalState;
+  };
+
+  /** get boolean _activateWithNegativeRelativeVelocity
+   *
+   *  \return a Boolean
+   */
+  inline bool activateWithNegativeRelativeVelocity()
+  {
+    return _activateWithNegativeRelativeVelocity;
+  };
+
+  /** set the boolean to perform activation with negative relative velocity
+   *
+   *  \param newActivateWithNegativeRealtiveVelocity a Boolean
+   */
+  inline void
+  setActivateWithNegativeRelativeVelocity(bool newActivateWithNegativeRelativeVelocity)
+  {
+    _activateWithNegativeRelativeVelocity = newActivateWithNegativeRelativeVelocity;
   };
 
 
@@ -547,7 +591,12 @@ public:
   /** update the input of the Interaction attached to this Integrator
    */
   void updateInput(double time, unsigned int level) override;
-	
+
+  /** Compute the matrix of work of forces by ds
+     \return SP::Siconosmatrix
+   */
+  SP::SimpleMatrix computeWorkForces();
+
   /** Displays the data of the MoreauJeanOSI's integrator
    */
   void display() override;

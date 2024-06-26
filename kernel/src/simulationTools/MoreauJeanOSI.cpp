@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@
 #include "NewtonImpactNSL.hpp"
 #include "MultipleImpactNSL.hpp"
 #include "NewtonImpactFrictionNSL.hpp"
+#include "FremondImpactFrictionNSL.hpp"
 #include "NewtonImpactRollingFrictionNSL.hpp"
 #include "CohesiveZoneModelNIFNSL.hpp"
 #include "TypeName.hpp"
@@ -59,14 +60,15 @@ template <typename T> static std::shared_ptr<T> ptr(const T& a)
 }
 
 // --- constructor from a set of data ---
-MoreauJeanOSI::MoreauJeanOSI(double theta, double gamma):
-  OneStepIntegrator(OSI::MOREAUJEANOSI),
-  _constraintActivationThreshold(0.0),
-  _useGammaForRelation(false),
-  _explicitNewtonEulerDSOperators(false),
-  _explicitIntegrationofInteractionInternalState(false),
-  _hasInputInIndexSet0(false),
-  _isWSymmetricDefinitePositive(false)
+MoreauJeanOSI::MoreauJeanOSI(double theta, double gamma)
+  : OneStepIntegrator(OSI::MOREAUJEANOSI),
+    _constraintActivationThreshold(0.0),
+    _constraintActivationThresholdVelocity(0.0),
+    _useGammaForRelation(false),
+    _explicitNewtonEulerDSOperators(false),
+    _explicitIntegrationofInteractionInternalState(false),
+    _isWSymmetricDefinitePositive(false),
+    _activateWithNegativeRelativeVelocity(false)
 {
   _levelMinForOutput= 0;
   _levelMaxForOutput =1;
@@ -279,7 +281,6 @@ void MoreauJeanOSI::initializeIterationMatrixW(double time, SP::SecondOrderDS ds
     THROW_EXCEPTION("MoreauJeanOSI::initializeIterationMatrixW(t,ds) - ds does not belong to the OSI.");
 
   const DynamicalSystemsGraph::VDescriptor& dsv = _dynamicalSystemsGraph->descriptor(ds);
-
   if(_dynamicalSystemsGraph->properties(dsv).W)
     THROW_EXCEPTION("MoreauJeanOSI::initializeIterationMatrixW(t,ds) - W(ds) is already in the map and has been initialized.");
 
@@ -1383,6 +1384,28 @@ void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const NewtonImpactFrictionNSL&
       osnsp_rhs(2) +=  nslaw.et()  * _inter.y_k(_osnsp.inputOutputLevel())(2);    }
   }
 }
+void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const FremondImpactFrictionNSL& nslaw)
+{
+  SiconosVector & osnsp_rhs = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS];
+
+  // compute the local tangential velocity at t_{k+theta}
+  osnsp_rhs = _theta*   osnsp_rhs + (1.-_theta) * _inter.y_k(_osnsp.inputOutputLevel());
+
+  // The normal part is multiplied depends on en
+  osnsp_rhs(0) +=  (_theta*(1.+ nslaw.en()) - 1. ) * _inter.y_k(_osnsp.inputOutputLevel())(0);
+
+  // The tangential part is multiplied depends on et
+
+  if(nslaw.et() > 0.0)
+    {
+      THROW_EXCEPTION("MoreauJeanOSI::computeFreeOutput : do  not know how to take into account a tangential coefficient of restitution with Fremon NSL");
+      // osnsp_rhs(1) +=  nslaw.et()  * _inter.y_k(_osnsp.inputOutputLevel())(1);
+      // if(_inter.nonSmoothLaw()->size()>2)
+      // 	{
+      // 	  osnsp_rhs(2) +=  nslaw.et()  * _inter.y_k(_osnsp.inputOutputLevel())(2);    }
+    }
+
+}
 void MoreauJeanOSI::_NSLEffectOnFreeOutput::visit(const NewtonImpactRollingFrictionNSL& nslaw)
 {
   SiconosVector & osnsp_rhs = *(*_interProp.workVectors)[MoreauJeanOSI::OSNSP_RHS];
@@ -1542,12 +1565,10 @@ void MoreauJeanOSI::computeFreeOutput(InteractionsGraph::VDescriptor& vertex_int
   {
     double h = _simulation->timeStep();
     _NSLEffectOnFreeOutput nslEffectOnFreeOutput = _NSLEffectOnFreeOutput(*osnsp, inter,
-                                                                          indexSet.properties(vertex_inter), h);
-
+                                                                          indexSet.properties(vertex_inter), _theta, h );
     inter.nonSmoothLaw()->accept(nslEffectOnFreeOutput);
   }
   DEBUG_EXPR(osnsp_rhs.display(););
-
 
   DEBUG_END("MoreauJeanOSI::computeFreeOutput(InteractionsGraph::VDescriptor& vertex_inter, OneStepNSProblem* osnsp)\n");
 }
@@ -1908,6 +1929,7 @@ void MoreauJeanOSI::updateState(const unsigned int)
   DEBUG_END("MoreauJeanOSI::updateState(const unsigned int)\n");
 }
 
+//#define DEBUG_ACTIVATION 1
 
 bool MoreauJeanOSI::addInteractionInIndexSet(SP::Interaction inter, unsigned int i)
 {
@@ -1916,32 +1938,108 @@ bool MoreauJeanOSI::addInteractionInIndexSet(SP::Interaction inter, unsigned int
   assert(i == 1);
   double h = _simulation->timeStep();
   double y = (inter->y(i - 1))->getValue(0); // for i=1 y(i-1) is the position
-  double yDot = (inter->y(i))->getValue(0); // for i=1 y(i) is the velocity
+  double yDot = (inter->y(i))->getValue(0); // for i=1 y(i) is the current velocity
+  double yDot_k = (inter->y_k(i)).getValue(0); // for i=1 y(i) is the velocity et the beginning of the time step
+
 
   double gamma = 1.0 / 2.0;
+
   if(_useGamma)
   {
     gamma = _gamma;
   }
-  DEBUG_PRINTF("MoreauJeanOSI::addInteractionInIndexSet of level = %i yref=%e, yDot=%e, y_estimated=%e.,  _constraintActivationThreshold=%e\n", i,  y, yDot, y + gamma * h * yDot, _constraintActivationThreshold);
+  DEBUG_PRINTF("MoreauJeanOSI::addInteractionInIndexSet of level = %i yref=%e, yDot=%e, yDot_k=%e, y_estimated=%e.,  _constraintActivationThreshold=%e\n", i,  y, yDot, yDot_k, y + gamma * h * yDot, _constraintActivationThreshold);
   y += gamma * h * yDot;
   assert(!std::isnan(y));
 
-  bool criteria = (y <= _constraintActivationThreshold);
+  if (_activateWithNegativeRelativeVelocity)
+    {
+#ifdef DEBUG_ACTIVATION
+      if (fabs(yDot-yDot_k)> 1e-10)
+	{
 
-  criteria = criteria || inter->nonSmoothLaw()->isActiveAtLevel(*inter,i);
+	  std::cout << "MoreauJeanOSI::addInteractionInIndexSet ACTIVATE."
+		    << y << "<= " <<  _constraintActivationThreshold <<  std::endl;
 
-  DEBUG_EXPR_WE(
-    if(criteria)
-      {DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet ACTIVATE.\n");
-      }
-    else
-      {DEBUG_PRINT("MoreauJeanOSI::addInteractionInIndexSet DEACTIVATE.\n");
-      }
-    );
+	  getchar();
+	}
 
+     if (y <= _constraintActivationThreshold)
+	{
+	  if (not (yDot <=_constraintActivationThresholdVelocity))
+	    {
+	      std::cout << "\n MoreauJeanOSI::addInteractionInIndexSet activation at the position level but not at the velocity level."
+			<< "\n number :" << inter->number()
+			<< " y=" << y << "<= " <<  _constraintActivationThreshold
+			<< " yDot_k ="<< yDot_k << " > " <<  _constraintActivationThresholdVelocity
+			<< " yDot ="<< yDot << " > "  << _constraintActivationThresholdVelocity
+			<<std::endl;
+	      //getchar();
+	    }
+	  else
+	    {
+	      std::cout << "\n MoreauJeanOSI::addInteractionInIndexSet activation at the position level but not at the velocity level."
+			<< "\n number :" << inter->number()
+			<< " y=" << y << "<= " <<  _constraintActivationThreshold
+			<< " yDot_k ="<< yDot_k << "<= " <<  _constraintActivationThresholdVelocity
+			<< " yDot ="<< yDot << " <= "  << _constraintActivationThresholdVelocity
+			<< std::endl;
 
-  return criteria ;
+	  }
+
+	}
+#endif
+      DEBUG_EXPR_WE(
+		    if((y <= _constraintActivationThreshold) and (yDot_k <= _constraintActivationThreshold))
+		      std::cout << "MoreauJeanOSI::addInteractionInIndexSet ACTIVATE with velocity threshold."
+				<< " gamma " << gamma
+				<< " y=" << y << "<= " <<  _constraintActivationThreshold
+				<< " yDot_k ="<< yDot_k << "<= " <<  _constraintActivationThresholdVelocity
+				<< std::endl;
+		    	    );
+
+      return ((y <= _constraintActivationThreshold) and (yDot <= _constraintActivationThresholdVelocity));
+    }
+  else
+    {
+#ifdef DEBUG_ACTIVATION
+      if (fabs(yDot-yDot_k)> 1e-10)
+	{
+	  if(y <= _constraintActivationThreshold)
+		      std::cout << "MoreauJeanOSI::addInteractionInIndexSet ACTIVATE."
+				<< y << "<= " <<  _constraintActivationThreshold <<  std::endl;
+
+	  getchar();
+	}
+      if (y <= _constraintActivationThreshold)
+	{
+	  std::cout << "ACTIVATED "
+			<< "number :" << inter->number()
+			<< " y=" << y << "<= " <<  _constraintActivationThreshold
+			<< " yDot_k ="<< yDot_k
+			<< " yDot ="<< yDot
+			<< std::endl;
+	}
+      else
+	{
+	  std::cout << "NOT ACTIVATED "
+			<< " number :" << inter->number()
+			<< " y=" << y << "<= " <<  _constraintActivationThreshold
+			<< " yDot_k ="<< yDot_k
+			<< " yDot ="<< yDot
+			<<std::endl;
+	  //getchar();
+	}
+
+#endif
+      DEBUG_EXPR_WE(
+		    if(y <= _constraintActivationThreshold)
+		      std::cout << "MoreauJeanOSI::addInteractionInIndexSet ACTIVATE."
+				<< y << "<= " <<  _constraintActivationThreshold <<  std::endl;
+		    );
+      return (y <= _constraintActivationThreshold);
+    }
+
 }
 
 
@@ -2031,6 +2129,149 @@ void MoreauJeanOSI::updateInput(double time, unsigned int level)
 
   DEBUG_END("MoreauJeanOSI::updateInput(double time, unsigned int level)\n");
 };
+
+SP::SimpleMatrix MoreauJeanOSI::computeWorkForces()
+{
+  DEBUG_BEGIN("MoreauJeanOSI::computeWorkForces()\n");
+
+  double t = _simulation->nextTime(); // End of the time step
+  double told = _simulation->startingTime(); // Beginning of the time step
+  double h = t - told; // time step length
+
+  DEBUG_PRINTF("nextTime %f\n", t);
+  DEBUG_PRINTF("startingTime %f\n", told);
+  DEBUG_PRINTF("time step size %f\n", h);
+
+
+  // Operators computed at told have index i, and (i+1) at t.
+
+  // Iteration through the set of Dynamical Systems.
+  //
+  //SP::DynamicalSystem ds; // Current Dynamical System.
+  Type::Siconos dsType ; // Type of the current DS.
+
+
+  size_t number_of_ds= _simulation->nonSmoothDynamicalSystem()->getNumberOfDS();
+  SP::SimpleMatrix workForces (new SimpleMatrix(number_of_ds, 2));
+
+  size_t cnt_ds=0;
+
+  DynamicalSystemsGraph::VIterator dsi, dsend;
+  for(std::tie(dsi, dsend) = _dynamicalSystemsGraph->vertices(); dsi != dsend; ++dsi)
+  {
+    if(!checkOSI(dsi)) continue;
+    DynamicalSystem& ds = *_dynamicalSystemsGraph->bundle(*dsi);
+    VectorOfVectors& ds_work_vectors = *_dynamicalSystemsGraph->properties(*dsi).workVectors;
+
+    dsType = Type::value(ds); // Its type
+
+    // 3 - Lagrangian Non Linear Systems
+    if(dsType == Type::LagrangianDS || dsType == Type::LagrangianLinearTIDS)
+    {
+
+      // -- Convert the DS into a Lagrangian one.
+      LagrangianDS& d = static_cast<LagrangianDS&>(ds);
+
+      // Get state i (previous time step) from Memories -> var. indexed with "Old"
+      const SiconosVector &vold = d.velocityMemory().getSiconosVector(0);
+
+      const SiconosVector &v = *d.velocity(); // v = v_k,i+1
+
+      SP::SiconosVector f_k_theta (new SiconosVector(v.size()));
+      SP::SiconosVector v_k_theta (new SiconosVector(v.size()));
+      f_k_theta->zero();
+      v_k_theta->zero();
+
+
+      if(d.forces())
+      {
+        // Cheaper version: get forces(ti,vi,qi) from memory
+        const SiconosVector& fold = d.forcesMemory().getSiconosVector(0);
+        double coef =  (1 - _theta);
+        scal(coef, fold, *f_k_theta, false);
+	scal(coef, vold, *v_k_theta, false);
+
+        // computes forces(ti+1, v_k,i+1, q_k,i+1) = forces(t,v,q)
+        d.computeForces(t,d.q(),d.velocity());
+        coef = _theta;
+	scal(coef, *d.forces(), *f_k_theta, false);
+	scal(coef, v, *v_k_theta, false);
+
+	DEBUG_PRINT("MoreauJeanOSI:: new forces :\n");
+        DEBUG_EXPR(d.forces()->display(););
+        DEBUG_EXPR(f_k_theta->display(););
+
+	// scalar product
+	workForces->setValue(ds.number(),0,  ds.number());
+	workForces->setValue(ds.number(),1,  h* inner_prod(*f_k_theta,*v_k_theta));
+
+	DEBUG_EXPR(workForces->display(););
+      }
+    }
+    else if(dsType == Type::NewtonEulerDS)
+    {
+      DEBUG_PRINT("MoreauJeanOSI::computeWorkForces(), dsType == Type::NewtonEulerDS\n");
+      // residu = M (v_k,i+1 - v_i) - h*_theta*forces(t,v_k,i+1, q_k,i+1) - h*(1-_theta)*forces(ti,vi,qi) - pi+1
+
+      // -- Convert the DS into a NewtonEulerDS one.
+      NewtonEulerDS& d = static_cast<NewtonEulerDS&>(ds);
+
+      // Get the state  (previous time step) from memory vector
+      // -> var. indexed with "Old"
+      const SiconosVector& vold = d.twistMemory().getSiconosVector(0);
+
+      // Get the current state vector
+      //SiconosVector& q = *d.q();
+      const SiconosVector& v = *d.twist(); // v = v_k,i+1
+
+      SP::SiconosVector f_k_theta (new SiconosVector(v.size()));
+      SP::SiconosVector v_k_theta (new SiconosVector(v.size()));
+      f_k_theta->zero();
+      v_k_theta->zero();
+
+      if(d.forces())   // if fL exists
+      {
+        DEBUG_PRINTF("MoreauJeanOSI:: _theta = %e\n",_theta);
+        DEBUG_PRINTF("MoreauJeanOSI:: h = %e\n",h);
+
+        // Cheaper version: get forces(ti,vi,qi) from memory
+        const SiconosVector& fold = d.forcesMemory().getSiconosVector(0);
+        DEBUG_PRINT("MoreauJeanOSI:: old forces :\n");
+        DEBUG_EXPR(fold.display(););
+
+        double coef = (1 - _theta);
+        scal(coef, fold, *f_k_theta, false);
+	scal(coef, vold, *v_k_theta, false);
+
+        // computes forces(ti,v,q)
+        d.computeForces(t,d.q(),d.twist());
+        coef =  _theta;
+        scal(coef, *d.forces(), *f_k_theta, false);
+	scal(coef, v, *v_k_theta, false);
+
+        DEBUG_PRINT("MoreauJeanOSI:: new forces :\n");
+        DEBUG_EXPR(d.forces()->display(););
+        DEBUG_EXPR(f_k_theta->display(););
+
+	// scalar product
+	workForces->setValue(cnt_ds, 0,  ds.number());
+	workForces->setValue(cnt_ds, 1,  h* inner_prod(*f_k_theta,*v_k_theta));
+
+      }
+
+      cnt_ds++;
+
+      DEBUG_PRINT("MoreauJeanOSI::computeWorkForces :\n");
+
+    }
+    else
+      THROW_EXCEPTION("MoreauJeanOSI::computeWorkForces - not yet implemented for Dynamical system of type: " + Type::name(ds));
+
+  }
+
+  DEBUG_END("MoreauJeanOSI::computeWorkForces()\n");
+  return workForces;
+}
 
 
 void MoreauJeanOSI::display()

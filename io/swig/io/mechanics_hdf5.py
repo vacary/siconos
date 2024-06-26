@@ -73,7 +73,7 @@ def tmpfile(suffix='', prefix='siconos_io', contents=None,
     """
     A context manager for a named temporary file.
     """
-    (_, tfilename) = tempfile.mkstemp(suffix=suffix, prefix=prefix)
+    (_fid, tfilename) = tempfile.mkstemp(suffix=suffix, prefix=prefix)
     fid = open(tfilename, 'w')
     if contents is not None:
         fid.write(contents)
@@ -97,6 +97,7 @@ def tmpfile(suffix='', prefix='siconos_io', contents=None,
 
     yield r
     fid.close()
+    os.close(_fid)
     if not debug:
         os.remove(tfilename)
 
@@ -253,9 +254,9 @@ def compute_inertia_and_center_of_mass(shapes, io=None):
     inertia
     inertia_matrix
     """
-    from OCC.GProp import GProp_GProps
-    from OCC.BRepGProp import brepgprop_VolumeProperties
-    from OCC.gp import gp_Ax1, gp_Dir
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop_VolumeProperties
+    from OCC.Core.gp import gp_Ax1, gp_Dir
     from siconos.mechanics import occ
 
     system = GProp_GProps()
@@ -330,10 +331,10 @@ def occ_topo_list(shape):
     :return: a list of edges and faces
     """
 
-    from OCC.TopAbs import TopAbs_FACE
-    from OCC.TopAbs import TopAbs_EDGE
-    from OCC.TopExp import TopExp_Explorer
-    from OCC.TopoDS import topods_Face, topods_Edge
+    from OCC.Core.TopAbs import TopAbs_FACE
+    from OCC.Core.TopAbs import TopAbs_EDGE
+    from OCC.Core.TopExp import TopExp_Explorer
+    from OCC.Core.TopoDS import topods_Face, topods_Edge
 
 
     topExp = TopExp_Explorer()
@@ -364,11 +365,11 @@ def occ_load_file(filename):
     :return: a topods_shape
     """
 
-    from OCC.STEPControl import STEPControl_Reader
-    from OCC.IGESControl import IGESControl_Reader
-    from OCC.BRep import BRep_Builder
-    from OCC.TopoDS import TopoDS_Compound
-    from OCC.IFSelect import IFSelect_RetDone, IFSelect_ItemsByEntity
+    from OCC.Core.STEPControl import STEPControl_Reader
+    from OCC.Core.IGESControl import IGESControl_Reader
+    from OCC.Core.BRep import BRep_Builder
+    from OCC.Core.TopoDS import TopoDS_Compound
+    from OCC.Core.IFSelect import IFSelect_RetDone, IFSelect_ItemsByEntity
 
     reader_switch = {'stp': STEPControl_Reader,
                      'step': STEPControl_Reader,
@@ -399,15 +400,35 @@ def occ_load_file(filename):
 
     return comp
 
+import os
+import shutil
+import subprocess
+
+
+def get_open_fds() -> int:
+    """Get the number of open file descriptors for the current process."""
+    lsof_path = shutil.which("lsof")
+    if lsof_path is None:
+        raise NotImplementedError("Didn't handle unavailable lsof.")
+    raw_procs = subprocess.check_output(
+        [lsof_path, "-w", "-Ff", "-p", str(os.getpid())]
+    )
+    def filter_fds(lsof_entry: str) -> bool:
+        return lsof_entry.startswith("f") and lsof_entry[1:].isdigit()
+
+    fds = list(filter(filter_fds, raw_procs.decode().split(os.linesep)))
+
+    return len(fds)
 
 def topods_shape_reader(shape, deflection=0.001):
 
-    from OCC.StlAPI import StlAPI_Writer
-    from OCC.BRepMesh import BRepMesh_IncrementalMesh
+    from OCC.Core.StlAPI import StlAPI_Writer
+    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 
     import vtk
 
     stl_writer = StlAPI_Writer()
+    reader = vtk.vtkSTLReader()
 
     with tmpfile(suffix='.stl') as tmpf:
         mesh = BRepMesh_IncrementalMesh(shape, deflection)
@@ -417,17 +438,17 @@ def topods_shape_reader(shape, deflection=0.001):
         stl_writer.Write(shape, tmpf[1])
         tmpf[0].flush()
 
-        reader = vtk.vtkSTLReader()
+
         reader.SetFileName(tmpf[1])
         reader.Update()
 
-        return reader
+    return reader
 
 
 def brep_reader(brep_string, indx):
 
-    from OCC.StlAPI import StlAPI_Writer
-    from OCC.BRepTools import BRepTools_ShapeSet
+    from OCC.Core.StlAPI import StlAPI_Writer
+    from OCC.Core.BRepTools import BRepTools_ShapeSet
     import vtk
 
     shape_set = BRepTools_ShapeSet()
@@ -494,6 +515,8 @@ class MechanicsHdf5(object):
         self._dynamic_data = None
         self._cf_data = None
         self._cf_info = None
+        self._cf_work = None
+        self._enery_work = None
         self._domain_data = None
         self._solv_data = None
         self._run_options = None
@@ -563,45 +586,94 @@ class MechanicsHdf5(object):
             self._dynamic_data.attrs['info'] = 'time,  ds id  ,  translation ,'
             self._dynamic_data.attrs['info'] += 'orientation'
 
-        self._cf_data = data(self._data, 'cf', 26,
-                             use_compression=self._use_compression)
-        if self._mode == 'w':
-            self._cf_data.attrs['info'] = 'time [0],  mu [1],  contact point A [2:4] ,'
-            self._cf_data.attrs['info'] += 'contact point B [5:7],  contact normal [8:10], '
-            self._cf_data.attrs['info'] += 'reaction impulse (global frame) [11:13],'
-            self._cf_data.attrs['info'] += 'relative gap [14:16], reaction velocity [17:19],'
-            self._cf_data.attrs['info'] += 'reaction impulse (local frame) [20:22],  interaction id [23],'
-            self._cf_data.attrs['info'] += 'ds 1 number [24],  ds 2 number [25]'
 
-        self._cf_info = data(self._data, 'cf_info', 5,
-                             use_compression=self._use_compression)
+        verbose_old = self._verbose
+        self._verbose=True
 
-        if self._mode == 'w':
-            self._cf_info.attrs['info'] = 'time [0],  interaction id [1]'
-            self._cf_info.attrs['info'] += 'ds 1 number [2],  ds 2 number [3]'
-            self._cf_info.attrs['info'] += 'static body number [4]'
+        try:
+            self._cf_data = data(self._data, 'cf', 26,
+                             use_compression=self._use_compression)
+            if self._mode == 'w':
+                self._cf_data.attrs['info'] = '[0] : time,\n [1] : mu,\n [2:4] : contact point A,\n'
+                self._cf_data.attrs['info'] += ' [5:7] : contact point B,\n [8:10] : contact normal,\n'
+                self._cf_data.attrs['info'] += ' [11:13] : reaction impulse (global frame),\n'
+                self._cf_data.attrs['info'] += ' [14:16] : relative gap,\n [17:19] : reaction velocity,\n'
+                self._cf_data.attrs['info'] += ' [20:22] : reaction impulse (local frame),\n [23] : interaction id,\n'
+                self._cf_data.attrs['info'] += ' [24] : ds 1 number,\n [25] : ds 2 number'
+        except Exception as e:
+            self.print_io_mechanics('Warning -  cf_data in the hdf5 file')
+            self.print_io_mechanics('        -  group(self._cf_data, log ) : ', e)
+
+
+        try:
+            self._cf_info = data(self._data, 'cf_info', 5,
+                             use_compression=self._use_compression)
+            if self._mode == 'w':
+                self._cf_info.attrs['info'] = '[0] : time [0],\n [1] : interaction id,\n'
+                self._cf_info.attrs['info'] += ' [1] : ds 1 number,\n [3] : ds 2 number,\n'
+                self._cf_info.attrs['info'] += ' [4] : static body number'
+        except Exception as e:
+            self.print_io_mechanics('Warning -  cf_info in the hdf5 file')
+            self.print_io_mechanics('        -  group(self._cf_info, log ) : ', e)
+        try:
+            self._cf_work = data(self._data, 'cf_work', 7,
+                                    use_compression=self._use_compression)
+
+            if self._mode == 'w':
+                self._cf_work.attrs['info'] = '[0] : time,\n [1] : interaction id,\n'
+                self._cf_work.attrs['info'] += ' [2] : normal contact work,\n [3] : tangent contact work,\n'
+                self._cf_work.attrs['info'] += ' [4] : friction dissipation,\n [5] : contact status'
+        except Exception as e:
+            self.print_io_mechanics('Warning -  cf_work in the hdf5 file')
+            self.print_io_mechanics('        -  group(self._cf_work, log ) : ', e)
+        try:
+            self._energy_work = data(self._data, 'energy_work', 8,
+                                    use_compression=self._use_compression)
+
+            if self._mode == 'w':
+                self._energy_work.attrs['info'] = '[0] : time,\n [1] : kinetic energy,\n'
+                self._energy_work.attrs['info'] += ' [2] : force work, \n'
+                self._energy_work.attrs['info'] += ' [3] : normal contact work,\n [4] : tangent contact work,\n'
+                self._energy_work.attrs['info'] += ' [5] : friction dissipation,\n [6,7] only negative part '
+        except Exception as e:
+            self.print_io_mechanics('Warning -  cf_work in the hdf5 file')
+            self.print_io_mechanics('        -  group(self._cf_work, log ) : ', e)
+
 
         if self._should_output_domains or 'domain' in self._data:
             self._domain_data = data(self._data, 'domain', 3,
                                      use_compression=self._use_compression)
         self._solv_data = data(self._data, 'solv', 4,
                                use_compression=self._use_compression)
-        self._run_options_data = data(self._data, 'siconos_mechanics_run_options', 1,
-                                      use_compression=self._use_compression)
+
+
+        try:
+            self._run_options_data = data(self._data, 'siconos_mechanics_run_options', 1,
+                                          use_compression=self._use_compression)
+        except Exception as e:
+            self.print_io_mechanics('Warning -  _data siconos_mechanics_run_options in the hdf5 file')
+            self.print_io_mechanics('        -  data(self._data, siconos_mechanics_run_options, ...) : ', e)
+
+
+        # self._run_options_data = data(self._data, 'siconos_mechanics_run_options', 1,
+        #                               use_compression=self._use_compression)
+
+        self._verbose=verbose_old
 
         try:
             self._log_data = group(self._data, 'log')
         except Exception as e:
-            print('Warning -  group(self._data, log ) : ', e)
+            self.print_io_mechanics('Warning -  _data in the hdf5 file')
+            self.print_io_mechanics('        -  group(self._data, log ) : ', e)
 
         self._input = group(self._data, 'input')
 
-        # if the hdf5 file contains already some objects, we correcly initialize
-        # the object counter
-        if len(self._input) >= 0:
-            type_obj = [obj.attrs['type'] for  obj in self._input.values()]
-            self._number_of_dynamic_objects = type_obj.count('dynamic')
-            self._number_of_static_objects = type_obj.count('static')
+        # # if the hdf5 file contains already some objects, we correcly initialize
+        # # the object counter
+        # if len(self._input) >= 0:
+        #     type_obj = [obj.attrs['type'] for  obj in self._input.values()]
+        #     self._number_of_dynamic_objects = type_obj.count('dynamic')
+        #     self._number_of_static_objects = type_obj.count('static')
 
         self._nslaws_data = group(self._data, 'nslaws')
         return self
@@ -611,6 +683,9 @@ class MechanicsHdf5(object):
 
     def print_verbose(self, *args, **kwargs):
         if self._verbose:
+            print('[io.mechanics]', *args, **kwargs)
+
+    def print_io_mechanics(self, *args, **kwargs):
             print('[io.mechanics]', *args, **kwargs)
 
     # hdf5 structure
@@ -662,6 +737,12 @@ class MechanicsHdf5(object):
         Contact points information.
         """
         return self._cf_info
+
+    def contact_work_data(self):
+        """
+        Contact points information.
+        """
+        return self._cf_work
 
     def domains_data(self):
         """
@@ -848,7 +929,7 @@ class MechanicsHdf5(object):
 
         if name not in self._ref:
 
-            from OCC.STEPControl import STEPControl_Writer, STEPControl_AsIs
+            from OCC.Core.STEPControl import STEPControl_Writer, STEPControl_AsIs
 
             # step format is used for the storage.
             step_writer = STEPControl_Writer()
@@ -1201,12 +1282,38 @@ class MechanicsHdf5(object):
             nslaw=self._nslaws_data[name]
             if nslaw.attrs['type'] != 'NewtonImpactRollingFrictionNSL':
                 self.print_verbose('[warning] a nslaw is already existing with the same name ', name ,' but not the same type')
-                
+
         nslaw.attrs['mu'] = mu
         nslaw.attrs['mu_r'] = mu_r
         nslaw.attrs['e'] = e
         nslaw.attrs['gid1'] = collision_group1
         nslaw.attrs['gid2'] = collision_group2
+        
+    def add_Fremond_impact_friction_nsl(self, name, mu, e=0, collision_group1=0,
+                                       collision_group2=0):
+        """
+        Add a nonsmooth law for contact between 2 groups.
+        Only NewtonImpactFrictionNSL are supported.
+        name is an user identifiant and must be unique,
+        mu is the coefficient of friction,
+        e is the coefficient of restitution on the contact normal,
+        gid1 and gid2 define the group identifiants.
+
+        """
+        if name not in self._nslaws_data:
+            nslaw = self._nslaws_data.create_dataset(name, (0,))
+            nslaw.attrs['type'] = 'FremondImpactFrictionNSL'
+        else:
+            nslaw=self._nslaws_data[name]
+            if nslaw.attrs['type'] != 'FremondImpactFrictionNSL':
+                self.print_verbose('[warning] a nslaw is already existing with the same name ', name ,' but not the same type')
+
+        nslaw.attrs['mu'] = mu
+        nslaw.attrs['e'] = e
+        nslaw.attrs['gid1'] = collision_group1
+        nslaw.attrs['gid2'] = collision_group2
+
+
 
     def add_binary_cohesive_nsl(self, name, mu,  e=0, sigma_c=0, delta_c=0,
                                 collision_group1=0,

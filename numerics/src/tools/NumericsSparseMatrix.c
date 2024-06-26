@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,10 +68,6 @@ static int sort_indices_struct_cmp(const void *a, const void *b)
 #pragma GCC diagnostic pop
 #endif
 
-version_t NSM_version(const NumericsSparseMatrix* M, NSM_t type)
-{
-  return NDV_value(&(M->versions[type]));
-}
 
 void NSM_set_version(NumericsSparseMatrix* M, NSM_t type,
                      version_t value)
@@ -87,28 +83,7 @@ void NSM_inc_version(NumericsSparseMatrix* M, NSM_t type)
 }
 
 /* internal compare function */
-static inline NSM_t nsm_max(const NumericsSparseMatrix* M,
-                               NSM_t type1,
-                               NSM_t type2)
-{
-  return NSM_version(M, type2) > NSM_version(M, type1) ?
-    type2 : type1;
-}
 
-NSM_t NSM_latest_id(const NumericsSparseMatrix* M)
-{
-  assert(M);
-
-  return (nsm_max(M, nsm_max(M, nsm_max(M, NSM_TRIPLET,
-                                        NSM_HALF_TRIPLET),
-                             NSM_CSC),
-                  NSM_CSR));
-}
-
-version_t NSM_max_version(const NumericsSparseMatrix* M)
-{
-  return NSM_version(M, NSM_latest_id(M));
-}
 
 
 CSparseMatrix* NSM_latest(const NumericsSparseMatrix* M)
@@ -139,16 +114,6 @@ void NSM_reset_versions(NumericsSparseMatrix* M)
   NSM_reset_version(M, NSM_CSC);
   NSM_reset_version(M, NSM_CSR);
 }
-
-void NSM_version_sync(NumericsSparseMatrix* M)
-{
-  if (NSM_max_version(M) > 0)
-  {
-    M->origin = NSM_latest_id(M);
-    assert(NSM_latest(M));
-  }
-}
-
 
 void NSM_null(NumericsSparseMatrix* A)
 {
@@ -430,6 +395,8 @@ NSM_linear_solver_params* NSM_linearSolverParams_new(void)
 #if defined(WITH_MA57)
   p->LDLT_solver = NSM_HSL;
 #endif
+
+  p->parent_matrix = NULL;
 
   p->linear_solver_data = NULL;
   p->solver_free_hook = NULL;

@@ -1,7 +1,7 @@
 /* Siconos is a program dedicated to modeling, simulation and control
  * of non smooth dynamical systems.
  *
- * Copyright 2022 INRIA.
+ * Copyright 2024 INRIA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@
 #include "RelayNSL.hpp"
 #include "NewtonImpactNSL.hpp"
 #include "NewtonImpactFrictionNSL.hpp"
+#include "FremondImpactFrictionNSL.hpp"
 #include "NewtonImpactRollingFrictionNSL.hpp"
 #include "CohesiveZoneModelNIFNSL.hpp"
 #include "DynamicalSystem.hpp"
@@ -249,6 +250,23 @@ struct Interaction::_setLevels : public SiconosVisitor
       THROW_EXCEPTION("Interaction::_setLevels::visit - unknown relation type for the nslaw ");
     }
   }
+  void visit(const FremondImpactFrictionNSL& nslaw)
+  {
+    RELATION::TYPES relationType = _interaction->relation()->getType();
+    if(relationType == Lagrangian || relationType == NewtonEuler)
+    {
+      _interaction->setLowerLevelForOutput(0);
+      _interaction->setUpperLevelForOutput(1);
+
+      _interaction->setLowerLevelForInput(0);
+      _interaction->setUpperLevelForInput(1);
+
+    }
+    else
+    {
+      THROW_EXCEPTION("Interaction::_setLevels::visit - unknown relation type for the nslaw ");
+    }
+  }
   void visit(const MultipleImpactNSL& nslaw)
   {
     RELATION::TYPES relationType = _interaction->relation()->getType();
@@ -267,6 +285,9 @@ struct Interaction::_setLevels : public SiconosVisitor
     }
   }
 };
+
+
+
 
 
 void Interaction::reset()
