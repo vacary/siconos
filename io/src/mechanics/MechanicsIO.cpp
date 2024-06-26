@@ -212,6 +212,10 @@ struct ForE : public Question<double>
   {
     answer = 0.;
   }
+  void visit(const CohesiveZoneModelNIFNSL& nsl)
+  {
+    answer = nsl . en();
+  }
 };
 
 
