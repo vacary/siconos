@@ -39,6 +39,8 @@ private:
   */
   ACCEPT_SERIALIZATION(CohesiveZoneModelNIFNSL);
 
+  /** fallback law when the interface is broken */
+  SP::NonSmoothLaw _nslaw_broken;
 
 protected:
 
@@ -57,8 +59,8 @@ public:
    *  \param en double : normal e coefficient
    *  \param et double : tangent e coefficient
    *  \param mu double : friction coefficient
-   *  \param sigma_c double : cohesive resistance to traction 
-   *  \param delta_c double : critical displacement 
+   *  \param sigma_c double : cohesive resistance to traction
+   *  \param delta_c double : critical displacement
    *  \param size unsigned int: size of the ns law
    */
   CohesiveZoneModelNIFNSL(double en, double et, double mu, unsigned int size);
@@ -70,7 +72,9 @@ public:
    * \return the value of r_cohesion
    */
   virtual double * r_cohesion(Interaction& inter) const =0;
-  
+
+  SP::NonSmoothLaw nslawBRoken(){return _nslaw_broken;};
+
   // OTHER FUNCTIONS
 
   /** print the data to the screen

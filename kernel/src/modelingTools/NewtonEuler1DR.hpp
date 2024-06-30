@@ -21,6 +21,7 @@
 #ifndef NEWTONEULERIMPACT_H
 #define NEWTONEULERIMPACT_H
 
+#include "EulerMoreauOSI.hpp"
 #include "NewtonEulerDS.hpp"
 #include "NewtonEulerR.hpp"
 
@@ -34,7 +35,7 @@
 
 */
 class NewtonEuler1DR : public NewtonEulerR {
-protected:
+ protected:
   ACCEPT_SERIALIZATION(NewtonEuler1DR);
 
   /** Current Contact Points, may be updated within Newton loop based
@@ -94,11 +95,11 @@ protected:
    */
   void setnc(SP::SiconosVector nnc) { _Nc = nnc; };
 
-private:
+ private:
   void NIcomputeJachqTFromContacts(SP::SiconosVector q1);
   void NIcomputeJachqTFromContacts(SP::SiconosVector q1, SP::SiconosVector q2);
 
-public:
+ public:
   /** V.A. boolean _isOnCOntact ?? Why is it public members ?
    *  seems parametrize the projection algorithm
    *  the projection is done on the surface  \f$ y=0 \f$  or on  \f$ y \geq 0 \f$
@@ -108,10 +109,13 @@ public:
   /** constructor
    */
   NewtonEuler1DR()
-      : NewtonEulerR(), _Pc1(new SiconosVector(3)), _Pc2(new SiconosVector(3)),
-        _relPc1(new SiconosVector(3)), _relPc2(new SiconosVector(3)),
-        _Nc(new SiconosVector(3)), _relNc(new SiconosVector(3))
-  {
+      : NewtonEulerR(),
+        _Pc1(new SiconosVector(3)),
+        _Pc2(new SiconosVector(3)),
+        _relPc1(new SiconosVector(3)),
+        _relPc2(new SiconosVector(3)),
+        _Nc(new SiconosVector(3)),
+        _relNc(new SiconosVector(3)) {
     /*_ds1=nullptr;_ds2=nullptr;*/
   }
 
@@ -119,8 +123,7 @@ public:
    */
   virtual ~NewtonEuler1DR(){};
 
-  void computeJachq(double time, Interaction &inter,
-                            SP::BlockVector q0) override;
+  void computeJachq(double time, Interaction &inter, SP::BlockVector q0) override;
 
   void initialize(Interaction &inter) override;
 
@@ -150,6 +153,11 @@ public:
       \param y the resulting vector
    */
   void computehFromRelativeContactPoints(double time, const BlockVector &q0, SiconosVector &y);
+
+  void computeContactPointsFromRelativeContactPoints(
+      const BlockVector &q0, SiconosVector &r_pc1, SiconosVector &r_pc2, SiconosVector &r_nc,
+      SiconosVector &r_t1, SiconosVector &r_t2, SiconosVector &pc1, SiconosVector &pc2,
+      SiconosVector &nc, SiconosVector &t1, SiconosVector &t2);
 
   /** Return the distance between pc1 and pc, with sign according to normal */
   double distance() const;
@@ -182,8 +190,8 @@ public:
    *  \param nnc new coordinates
    */
   void setRelNc(SP::SiconosVector nnc) { _relNc = nnc; };
-  void display() const  override{}
+  void display() const override {}
 
   ACCEPT_STD_VISITORS();
 };
-#endif // NEWTONEULERRIMPACT_H
+#endif  // NEWTONEULERRIMPACT_H

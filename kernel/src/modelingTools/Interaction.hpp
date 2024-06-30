@@ -116,10 +116,10 @@ private:
   VectorOfMemories _lambdaMemory;
 
   /* vector of internal variables*/
-  SP::SiconosVector _internalVariables;
+  SP::VectorOfVectors _internalVariables;
 
   /* vector of internal variables at the previous time step*/
-  SP::SiconosVector _internalVariables_k;
+  SP::VectorOfVectors _internalVariables_k;
   
   /** the Non-smooth Law of the interaction*/
   SP::NonSmoothLaw _nslaw;
@@ -533,12 +533,12 @@ public:
   void setLambdaPtr(const unsigned int i, SP::SiconosVector newPtr);
 
 
-  SP::SiconosVector internalVariables()
+  SP::VectorOfVectors internalVariables()
   {
     return _internalVariables;
   };
   
-  SP::SiconosVector internalVariables_k()
+  SP::VectorOfVectors internalVariables_k()
   {
     return _internalVariables_k;
   };

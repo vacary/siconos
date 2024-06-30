@@ -23,13 +23,15 @@ CohesiveZoneModelNIFNSL::CohesiveZoneModelNIFNSL():
   NewtonImpactFrictionNSL()
 {
 }
-CohesiveZoneModelNIFNSL::CohesiveZoneModelNIFNSL(unsigned int size):
-  NewtonImpactFrictionNSL(size , 0.0, 0.0, 0.0)
-{}
+CohesiveZoneModelNIFNSL::CohesiveZoneModelNIFNSL(unsigned int size)
+    : NewtonImpactFrictionNSL(size, 0.0, 0.0, 0.0) {
+  _nslaw_broken.reset(new NewtonImpactFrictionNSL(0.,0.,0.,size));  
+}
 
 CohesiveZoneModelNIFNSL::CohesiveZoneModelNIFNSL(double en, double et, double mu, unsigned int size):
   NewtonImpactFrictionNSL(en, et, mu, size)
 {
+  _nslaw_broken.reset(new NewtonImpactFrictionNSL(en,et,mu,size));
 }
 
 CohesiveZoneModelNIFNSL::~CohesiveZoneModelNIFNSL()

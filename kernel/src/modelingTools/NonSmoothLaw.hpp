@@ -23,6 +23,7 @@
 #ifndef NSLAW_H
 #define NSLAW_H
 
+#include "SiconosAlgebraTypeDef.hpp"
 #include "SiconosConst.hpp"
 #include "SiconosFwd.hpp"
 #include "SiconosPointers.hpp"
@@ -90,7 +91,7 @@ public:
 
   /** initialize non smooth law if there is some internal variables
   */
-  virtual SP::SiconosVector initializeInternalVariables(Interaction &) { return SP::SiconosVector ();}
+  virtual SP::VectorOfVectors initializeInternalVariables(Interaction &) { return SP::VectorOfVectors ();}
 
   /** update non smooth law if there is some internal variables
   */

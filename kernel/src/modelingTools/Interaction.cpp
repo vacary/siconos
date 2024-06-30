@@ -323,10 +323,13 @@ void Interaction::reset()
   {
     _lambda[i].reset(new SiconosVector(nslawSize));
   }
+
+
+  // initialize internal variable 
   _internalVariables = _nslaw->initializeInternalVariables(*this);
 
   if(_internalVariables)
-    _internalVariables_k.reset(new SiconosVector(*_internalVariables));
+    _internalVariables_k.reset(new VectorOfVectors(*_internalVariables));
 
 
   
@@ -959,9 +962,14 @@ void Interaction::display(bool brief) const
     else std::cout << "->nullptr" <<std::endl;
   }
   std::cout << "| internalVariables : ";
+
+
   if (_internalVariables)
   {
-      _internalVariables->display();
+    for (auto v : *_internalVariables)
+    {
+      v->display();
+    }
   }
   else std::cout << "->nullptr" <<std::endl;
   
