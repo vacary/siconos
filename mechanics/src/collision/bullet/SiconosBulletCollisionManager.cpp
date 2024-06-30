@@ -2862,7 +2862,14 @@ void SiconosBulletCollisionManager::updateInteractions(SP::Simulation simulation
           // TODO cast down btshape from BodyShapeRecord-derived classes
           // rel->btShape[0] = pairA->btshape;
           // rel->btShape[1] = pairB->btshape;
-
+	  if (nslaw_CohesiveZoneModelNIFNSL)
+	    {
+	      rel->updateRelativeContactPointsFromManifoldPoint(*it->manifold, *it->point,
+								flip, _options.worldScale,
+								rbdsA,
+								rbdsB ? rbdsB
+								: SP::NewtonEulerDS());
+	    }
           rel->updateContactPointsFromManifoldPoint(*it->manifold, *it->point,
               flip, _options.worldScale,
               rbdsA ? rbdsA : SP::NewtonEulerDS(),
@@ -2877,6 +2884,21 @@ void SiconosBulletCollisionManager::updateInteractions(SP::Simulation simulation
                          "distance (%f).\n", rel->distance());
             _stats.interaction_warnings ++;
           }
+
+	  if(nslaw_CohesiveZoneModelNIFNSL )
+	    {
+	      double current_time = simulation->getTk();
+	      double t0 = simulation->nonSmoothDynamicalSystem()->t0();
+	      std::cout << "time = "<< current_time << " t0 "<< t0 << std::endl;
+	      if (fabs(current_time-t0) >= DBL_EPSILON )
+		{
+		  std::cout << "a creation of Cohesive interaction not at in the initial time" << std::endl;
+		  nslaw = nslaw_CohesiveZoneModelNIFNSL->nslawBRoken();
+		  //nslaw->display();
+		  //getchar();
+		}
+
+	    }
 
           inter = std::make_shared<Interaction>(nslaw, rel);
           _stats.new_interactions_created ++;
