@@ -27,6 +27,8 @@
 #define BINARYCOHESIVENSLAW_H
 
 #include "CohesiveZoneModelNIFNSL.hpp"
+#include "SiconosAlgebraTypeDef.hpp"
+#include "SiconosFwd.hpp"
 
 /** Newton Impact-Friction Non Smooth Law
  *
@@ -36,12 +38,23 @@ class BinaryCohesiveNSL : public CohesiveZoneModelNIFNSL
 
 public:
   typedef enum {DOOR_SHAPE,TRIANGLE_SHAPE} shape_type_t;
-  
+  enum BinaryCohesiveNSL_internalVariables {
+    BETA_SURFACE,
+    R_COHESION,
+    RELATIVE_CONTACT_POINT_1,
+    RELATIVE_CONTACT_POINT_2,
+    RELATIVE_NORMAL,
+    RELATIVE_TANGENT_1,
+    RELATIVE_TANGENT_2,
+    DISPLACEMENT_JUMP,
+    INTERNAL_VARIABLE_LENGTH
+  };
+
 private:
   /** serialization hooks
   */
   ACCEPT_SERIALIZATION(BinaryCohesiveNSL);
-  
+
   /** cohesive resistance to traction */
   double _sigma_c;
 
@@ -53,9 +66,13 @@ private:
 
   /** shape of the cohesive law */
   shape_type_t _shape_type;
-	
+
+  /** fallback law when the interface is broken */
+  SP::NonSmoothLaw _nslaw_broken;
+
+
 protected:
-  
+
   /** default constructor
    */
   BinaryCohesiveNSL();
@@ -71,8 +88,8 @@ public:
    *  \param en double : normal e coefficient
    *  \param et double : tangent e coefficient
    *  \param mu double : friction coefficient
-   *  \param sigma_c double : cohesive resistance to traction 
-   *  \param delta_c double : critical displacement 
+   *  \param sigma_c double : cohesive resistance to traction
+   *  \param delta_c double : critical displacement
    *  \param size unsigned int: size of the ns law
    */
   BinaryCohesiveNSL(double en, double et, double mu, double sigma_c, double delta_c, unsigned int size);
@@ -81,7 +98,7 @@ public:
 		    double sigma_c, double delta_c,
 		    unsigned int size,
 		    shape_type_t shape_type);
-	
+
   /** Destructor */
   ~BinaryCohesiveNSL();
 
@@ -100,7 +117,7 @@ public:
   {
     _sigma_c = newVal;
   };
- 
+
   /** getter of delta_c
    * \return the value of delta_c
    */
@@ -119,10 +136,10 @@ public:
 
 
   // OTHER FUNCTIONS
-  SP::SiconosVector initializeInternalVariables(Interaction &) override;
-  
+  SP::VectorOfVectors initializeInternalVariables(Interaction &) override;
+
   void updateInternalVariables(Interaction & inter) override;
-  
+
   /** Ask if the Nslaw is active at a given level
   */
   virtual bool isActiveAtLevel(Interaction& inter,  unsigned int level) override;
@@ -133,7 +150,7 @@ public:
    * \return the value of beta
    */
   double beta(Interaction& inter) const;
- 
+
   /** print the data to the screen
    */
   void display() const override;
