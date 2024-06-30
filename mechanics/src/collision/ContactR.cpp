@@ -47,7 +47,7 @@ void ContactR::computeh(double time, const BlockVector& q0, SiconosVector& y)
   DEBUG_END("ContactR::computeh(...)\n");
 }
 
-void ContactR::updateContactPoints(const SiconosVector& pos1,
+void ContactR::updateRelativeContactPoints(const SiconosVector& pos1,
                                    const SiconosVector& pos2,
                                    const SiconosVector& normal)
 {

@@ -52,9 +52,9 @@ public:
    *  \param pos2 Position on ds2 in ds2 frame (or world frame if ds2=null).
    *  \param normal Normal in ds2 frame (or world frame if ds2=null).
    */
-  virtual void updateContactPoints(const SiconosVector& pos1,
-                                   const SiconosVector& pos2,
-                                   const SiconosVector& normal);
+  virtual void updateRelativeContactPoints(const SiconosVector& pos1,
+					   const SiconosVector& pos2,
+					   const SiconosVector& normal);
 
   virtual void preDelete() {}
 
