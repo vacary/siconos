@@ -40,6 +40,11 @@ public:
       const btPersistentManifold &manifold, const btManifoldPoint &point,
       bool flip, double scaling, SP::NewtonEulerDS ds1, SP::NewtonEulerDS ds2);
 
+  void updateRelativeContactPointsFromManifoldPoint(const btPersistentManifold& manifold,
+                                                   const btManifoldPoint& point,
+                                                   bool flip, double scaling,
+                                                   SP::NewtonEulerDS ds1,
+                                                   SP::NewtonEulerDS ds2);
   void display() const override;
 
   ACCEPT_STD_VISITORS();
