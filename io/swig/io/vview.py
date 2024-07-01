@@ -93,6 +93,7 @@ class VViewOptions(object):
         self.with_charts= 0
         self.depth_2d=0.1
         self.verbose=0
+        self.cf_cohesive = False
 
 
 
@@ -113,7 +114,7 @@ class VViewOptions(object):
             [--camera=x,y,z] [--lookat=x,y,z] [--up=x,y,z] [--clipping=near,far] [--ortho=scale]
             [--with-charts=<int value>]
             [--visible=all,avatars,contactors] [--with-edges] [--verbose]
-            """)
+3            """)
         else:
             print("""Options:
      --help
@@ -195,7 +196,7 @@ class VViewOptions(object):
                                             'cf-scale=', 'normalcone-ratio=',
                                             'advance=', 'fps=',
                                             'camera=', 'lookat=', 'up=', 'clipping=', 'ortho=', 'visible=',
-                                            'with-edges', 'with-fixed-color', 'with-charts=', 'depth-2d=', 'verbose='])
+                                            'with-edges', 'with-fixed-color', 'with-charts=', 'depth-2d=', 'verbose=', 'cohesive-force'])
             self.configure(opts, args)
         except getopt.GetoptError as err:
             sys.stderr.write('{0}\n'.format(str(err)))
@@ -224,6 +225,9 @@ class VViewOptions(object):
 
             elif o == '--no-cf':
                 self.cf_disable = True
+
+            elif o == '--cohesive-force':
+                self.cf_cohesive = True
 
             elif o == '--imr':
                 self.imr = True
@@ -938,6 +942,7 @@ class IOReader(VTKPythonAlgorithmBase):
                                         outputType='vtkPolyData')
         self._io = None
         self._with_contact_forces = False
+        self._with_cohesive_forces = False
         self.cf_data = None
         self.time = 0
         self.timestep = 0
@@ -1044,7 +1049,6 @@ class IOReader(VTKPythonAlgorithmBase):
                 self.contact = True
 
                 data = self.cf_data
-
                 for mu in self._mu_coefs:
 
                     imu = numpy.where(
@@ -1056,19 +1060,36 @@ class IOReader(VTKPythonAlgorithmBase):
                     #)[0]
 
                     if len(imu) > 0:
-                        self.cpa_at_time[mu] = data[
-                            imu, 2:5]
-                        self.cpb_at_time[mu] = data[
-                            imu, 5:8]
-                        self.cn_at_time[mu] = - data[
-                            imu, 8:11]
-                        self.cf_at_time[mu] = data[
-                            imu, 11:14]
-                        if data[imu, :].shape[1] > 26:
-                            self.ids_at_time[mu] = data[
-                                imu, 23:26].astype(int)
+                        if self._with_cohesive_forces :
+                            self.cpa_at_time[mu] = data[
+                                imu, 10:13]
+                            self.cpb_at_time[mu] = data[
+                                imu, 13:16]
+                            self.cn_at_time[mu] = - data[
+                                imu, 16:19]
+                            self.cf_at_time[mu] = data[
+                                imu, 25:28]
+                            if data[imu, :].shape[1] > 26:
+                                self.ids_at_time[mu] = data[
+                                    imu, 23:26].astype(int)
+                            else:
+                                self.ids_at_time[mu] = None
                         else:
-                            self.ids_at_time[mu] = None
+                            self.cpa_at_time[mu] = data[
+                                imu, 2:5]
+                            self.cpb_at_time[mu] = data[
+                                imu, 5:8]
+                            self.cn_at_time[mu] = - data[
+                                imu, 8:11]
+                            self.cf_at_time[mu] = data[
+                                imu, 11:14]
+                            if data[imu, :].shape[1] > 26:
+                                self.ids_at_time[mu] = data[
+                                    imu, 23:26].astype(int)
+                            else:
+                                self.ids_at_time[mu] = None
+
+
 
             else:
                 try:
@@ -1086,7 +1107,6 @@ class IOReader(VTKPythonAlgorithmBase):
                     self.cpa[mu] = numpy_support.numpy_to_vtk(
                         self.cpa_at_time[mu])
                     self.cpa[mu].SetName('contact_positions_a')
-
                     self.cpb[mu] = numpy_support.numpy_to_vtk(
                         self.cpb_at_time[mu])
                     self.cpb[mu].SetName('contact_positions_b')
@@ -1166,6 +1186,14 @@ class IOReader(VTKPythonAlgorithmBase):
             self._idom_data = None
 
         self._icf_data = self._io.contact_forces_data()
+
+        if self._with_cohesive_forces :
+            print('with cohesive forces')
+            self._icf_data = self._io.contact_internal_variable_data()
+        else:
+            self._icf_data = self._io.contact_forces_data()
+
+
         self._isolv_data = self._io.solver_data()
         self._ivelo_data = self._io.velocities_data()
 
@@ -1220,6 +1248,7 @@ class IOReader(VTKPythonAlgorithmBase):
                                                         return_index=True)
         self._mu_coefs = numpy.unique(self._icf_data[:, 1],
                                       return_index=False)
+
 
         self.cpa_at_time = dict()
         self.cpa = dict()
@@ -1329,12 +1358,18 @@ class VView(object):
 
         self.io_reader = IOReader()
 
+        if self.opts.cf_cohesive:
+            self.io_reader._with_cohesive_forces =True
+
         self.io_reader.SetIO(io=self.io)
+
 
         if self.opts.cf_disable:
             self.io_reader.ContactForcesOff()
         else:
             self.io_reader.ContactForcesOn()
+            print('self.opts.cf_cohesive', self.opts.cf_cohesive)
+
 
         if self.opts.export:
             self.io_reader.ExportOn()
@@ -2993,6 +3028,7 @@ class VView(object):
                 transform = vtk.vtkTransform()
                 transform.Translate(-0.5, 0., 0.)
                 for mu in self.io_reader._mu_coefs:
+                    print('mu', mu)
                     self.init_cf_sources(mu, transform)
 
             if not self.opts.export:
