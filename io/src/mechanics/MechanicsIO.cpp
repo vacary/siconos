@@ -43,6 +43,9 @@ DUMMY(Bullet2d3DR, Lagrangian2d3DR);
 #include <Contact2d3DR.hpp>
 #include <BodyShapeRecord.hpp>
 
+#include "BinaryCohesiveNSL.hpp"
+#include <algorithm>
+
 #define OCC_CLASSES() \
   REGISTER(OccBody) \
   REGISTER(OccR)
@@ -948,7 +951,7 @@ static void compute_contact_work_and_status(SP::Interaction inter, double omega,
   double mu = ask<ForMu>(*inter->nonSmoothLaw());
   double e = ask<ForE>(*inter->nonSmoothLaw());
 
- 
+
   // Compute normal contact work
   double vn_minus =  inter->y_k(1).getValue(0);
   double vn_plus = inter->y(1)->getValue(0);
@@ -1157,5 +1160,136 @@ SP::SimpleMatrix MechanicsIO::contactContactWork(const NonSmoothDynamicalSystem&
   DEBUG_END("SP::SimpleMatrix MechanicsIO::contactContactWork");
 
   //result->display();
+  return result;
+}
+
+/* Get contact internal variables */
+/* default: a visitor that do nothing */
+
+struct ContactInternalVariableVisitor : public SiconosVisitor
+{
+  SP::Interaction inter;
+  // std::vector<int> answer; better with a vector of int
+  SiconosVector answer;
+  template<typename T>
+  void operator()(const T& rel)
+  {
+  }
+};
+
+/* then specializations : */
+template <>
+void ContactInternalVariableVisitor::operator()(const ContactR& rel) {
+  double id = inter->number();
+
+  SP::VectorOfVectors internalVariables = inter->internalVariables();
+  if (internalVariables) {
+
+    const SimpleMatrix& jachqT = *rel.jachqT();
+    SiconosVector cf(jachqT.size(1));
+
+    SiconosVector&  r_cohesion = *(*internalVariables)[BinaryCohesiveNSL::R_COHESION];
+    prod(r_cohesion, jachqT, cf, true);
+
+    int size = 0;
+    int cnt_vector =0;
+    for (auto v : *internalVariables) {
+      if (v){
+	size += v->size();
+	if (cnt_vector >= BinaryCohesiveNSL::TANGENT_2)
+	  break;
+	cnt_vector++;
+      }
+    }
+    size=size+3;
+    double id = inter->number();
+    answer.resize(size + 2);
+
+    double mu = ask<ForMu>(*inter->nonSmoothLaw());
+    answer.setValue(0, mu);
+    answer.setValue(size+1, id);
+    int cnt = 1;
+    cnt_vector =0;
+    for (auto v : *internalVariables) {
+      //std::cout << "v" << std::endl;
+      if (v) {
+        //v->display();
+        for (int k = 0; k < v->size(); k++) {
+          answer.setValue(cnt, v->getValue(k));
+          cnt++;
+        }
+      }
+      //std::cout << "BinaryCohesiveNSL::TANGENT_2 is: " << BinaryCohesiveNSL::TANGENT_2 << std::endl;
+      if (cnt_vector >= BinaryCohesiveNSL::TANGENT_2)
+	break;
+      cnt_vector++;
+    }
+    answer.setValue(cnt++, cf.getValue(0));
+    answer.setValue(cnt++, cf.getValue(1));
+    answer.setValue(cnt++, cf.getValue(2));
+
+
+
+  } else {
+    answer.resize(0);
+  }
+}
+
+SP::SimpleMatrix MechanicsIO::contactInternalVariable(const NonSmoothDynamicalSystem& nsds,
+						      unsigned int index_set) const
+{
+  DEBUG_BEGIN("SP::SimpleMatrix MechanicsIO::contactInternalVariable");
+  SP::SimpleMatrix result(new SimpleMatrix());
+  InteractionsGraph::VIterator vi, viend;
+
+  if(nsds.topology()->numberOfIndexSet() > 0)
+  {
+    InteractionsGraph& graph =
+      *nsds.topology()->indexSet(index_set);
+    unsigned int current_row;
+    result->resize(graph.vertices_number(), 1);
+
+    int max_data_size =1;
+
+    for(current_row=0, std::tie(vi,viend) = graph.vertices();
+        vi!=viend; ++vi)
+    {
+      DEBUG_PRINTF("process interaction : %p\n", &*graph.bundle(*vi));
+
+      /* create a visitor for specified classes */
+      typedef Visitor < Classes < NewtonEuler3DR,
+                                  ContactR,
+                                  Contact5DR,
+                                  Contact2dR,
+                                  Contact2d3DR>,
+                        ContactInternalVariableVisitor>::Make ContactInternalVariableInspector;
+      ContactInternalVariableInspector inspector;
+      inspector.inter = graph.bundle(*vi);
+      graph.bundle(*vi)->relation()->accept(inspector);
+      SiconosVector& data = inspector.answer;
+      if (max_data_size < data.size())
+	max_data_size = data.size();
+
+
+
+      if(data.size() ==0)
+      {
+        // Nothing is done. the interaction does not have internal varriables.
+      }
+      else
+      {
+	if(result->size(1) < max_data_size)
+	  {
+	    result->resize(graph.vertices_number(), max_data_size);
+	  }
+	result->setRow(current_row++, data);
+      }
+    }
+    result->resize(current_row, max_data_size);
+    DEBUG_EXPR(result->display(););
+
+  }
+  DEBUG_END("SP::SimpleMatrix MechanicsIO::contactInternalVariable");
+
   return result;
 }

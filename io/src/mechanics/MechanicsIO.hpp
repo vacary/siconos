@@ -87,6 +87,12 @@ public:
   SP::SimpleMatrix contactContactWork(const NonSmoothDynamicalSystem& nsds,
 				      unsigned int index_set=1,
 				      double omega = 0.5) const;
+  
+  /** get the internal variables  of all contact points
+   \return a matrix
+  */
+  SP::SimpleMatrix contactInternalVariable(const NonSmoothDynamicalSystem& nsds,
+					   unsigned int index_set=0) const;
 
   /** get the domain of each contact point
    * \param nsds current nonsmooth dynamical system
