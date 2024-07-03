@@ -552,7 +552,7 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep) {
     else
       checkSolverOutput(info, this);
     
-    updateInteractionInternalState();
+    //updateInteractionInternalState();
 
     if (!_skip_last_updateInput)  // warning:  _skip_last_updateInput=True should be only for
                                   // globalOSI
@@ -601,7 +601,7 @@ void TimeStepping::newtonSolve(double criterion, unsigned int maxStep) {
           checkSolverOutput(info, this);
       }
 
-      updateInteractionInternalState();
+      //updateInteractionInternalState();
       updateAllInput();
       updateState();
 
